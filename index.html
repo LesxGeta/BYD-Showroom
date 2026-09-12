@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>BYD — Guided Walkaround</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── BYD brand system ───────────────────────────────────────────────
+   Butterfly Blue #40A2E3 — primary
+   Baltic Sea     #252728 — surface
+   Festival Red   #D70C19 — reserved for genuine emphasis only
+   Pure White     #FFFFFF
+   Type: Inter throughout (Havelock Titling is the licensed display
+   face; Inter with tight tracking is the closest open substitute). */
+:root{
+  --byd-blue:#40A2E3;
+  --byd-blue-dim:rgba(64,162,227,.3);
+  --byd-blue-soft:rgba(64,162,227,.1);
+  --byd-red:#D70C19;
+  --baltic:#252728;
+  --void:#0E1012;
+  --surface:#191C1E;
+  --surface-2:#212527;
+  --white:#FFFFFF;
+  --ink:rgba(255,255,255,.58);
+  --ink-dim:rgba(255,255,255,.34);
+  --hairline:rgba(255,255,255,.1);
+  --display:'Inter',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--void);color:var(--white);font-family:var(--body);-webkit-font-smoothing:antialiased;touch-action:none}
+canvas{display:block;position:fixed;inset:0}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--byd-blue);outline-offset:2px}
+.tideline{height:1px;background:linear-gradient(90deg,transparent,var(--byd-blue-dim) 15%,var(--byd-blue) 50%,var(--byd-blue-dim) 85%,transparent);opacity:.8}
+.logo{height:26px;width:auto;display:block}
+
+/* Boot */
+#boot{position:fixed;inset:0;z-index:200;background:var(--void);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:32px;text-align:center}
+#boot .logo{height:38px}
+.sub{font-size:.68rem;letter-spacing:.28em;text-transform:uppercase;color:var(--ink);margin-top:14px;font-weight:400}
+#bar{width:min(400px,78vw);height:2px;background:rgba(255,255,255,.09);overflow:hidden}
+#bar i{display:block;height:100%;width:0;background:var(--byd-blue);transition:width .35s}
+#bootnote{font-size:.78rem;color:var(--ink)}
+#booterr{display:none;color:var(--byd-red);font-size:.82rem;max-width:50ch;line-height:1.7}
+
+/* Chooser */
+#pick{position:fixed;inset:0;z-index:170;background:rgba(14,16,18,.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:30px;text-align:center}
+#pick.on{display:flex}
+#pick .logo{height:30px;margin-bottom:4px}
+#pick h1{font-family:var(--display);font-weight:300;font-size:clamp(1.4rem,4.4vw,2rem);letter-spacing:-.01em;max-width:24ch;line-height:1.35}
+#pick .kicker{font-size:.64rem;letter-spacing:.28em;text-transform:uppercase;color:var(--byd-blue);font-weight:500}
+.cars{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.carbtn{background:var(--surface);border:1px solid var(--hairline);border-radius:4px;padding:20px 24px;min-width:230px;text-align:left;transition:border-color .2s,transform .2s,background .2s}
+.carbtn:hover{border-color:var(--byd-blue-dim);transform:translateY(-2px);background:var(--surface-2)}
+.carbtn .n{font-family:var(--display);font-size:1.1rem;font-weight:600;letter-spacing:-.01em}
+.carbtn .b{font-size:.74rem;color:var(--ink);margin-top:6px;line-height:1.55}
+.carbtn .p{font-size:.88rem;margin-top:13px;color:var(--byd-blue);font-weight:500}
+
+/* Stage */
+#stage{position:fixed;inset:0;z-index:20;pointer-events:none;display:none}
+#stage.on{display:block}
+#top{position:fixed;top:0;left:0;right:0;padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:linear-gradient(to bottom,rgba(14,16,18,.85),transparent 90%);pointer-events:none}
+#top .lockup{pointer-events:none;display:flex;align-items:center;gap:13px}
+#top .divider{width:1px;height:22px;background:var(--hairline)}
+#top .vh{font-size:.68rem;letter-spacing:.02em;color:var(--white);font-weight:500}
+#top .vh small{display:block;font-size:.58rem;letter-spacing:.18em;color:var(--ink);text-transform:uppercase;margin-top:3px;font-weight:400}
+#tools{display:flex;gap:8px;pointer-events:auto}
+.tool{background:rgba(25,28,30,.9);backdrop-filter:blur(12px);border:1px solid var(--hairline);border-radius:3px;padding:8px 12px;font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;font-weight:500;color:var(--ink);transition:.18s}
+.tool:hover{border-color:var(--byd-blue-dim);color:var(--white)}
+.tool.active{background:var(--byd-blue-soft);border-color:var(--byd-blue-dim);color:var(--byd-blue)}
+.aistat{display:flex;align-items:center;gap:6px}
+.aistat::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.aistat.live{color:var(--byd-blue);border-color:var(--byd-blue-dim)}
+.aistat.dead{color:rgba(255,255,255,.45)}
+
+/* Progress rail */
+#rail{position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:30;display:flex;flex-direction:column;gap:1px;pointer-events:auto;align-items:flex-end}
+#rail button{display:flex;align-items:center;gap:11px;padding:7px 0;opacity:.4;transition:opacity .2s;flex-direction:row-reverse}
+#rail button:hover,#rail button.here{opacity:1}
+#rail .pip{width:16px;height:2px;background:var(--white);transition:width .3s,background .3s}
+#rail button.here .pip{width:30px;background:var(--byd-blue)}
+#rail button.done .pip{background:var(--byd-blue-dim)}
+#rail .lbl{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;font-weight:500}
+#rail button.here .lbl{color:var(--byd-blue)}
+
+/* Hotspot markers */
+.spot{position:fixed;z-index:25;transform:translate(-50%,-50%);pointer-events:none;transition:opacity .35s}
+.spot .ring{width:20px;height:20px;border:1px solid var(--byd-blue);border-radius:50%;position:relative}
+.spot .ring::after{content:'';position:absolute;inset:6px;background:var(--byd-blue);border-radius:50%}
+.spot .ring::before{content:'';position:absolute;inset:-1px;border:1px solid var(--byd-blue);border-radius:50%;animation:ping 2.2s infinite}
+@keyframes ping{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.4);opacity:0}}
+.spot .tag{position:absolute;left:30px;top:-3px;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;background:rgba(14,16,18,.88);padding:5px 10px;border-left:2px solid var(--byd-blue);font-weight:500}
+
+/* Dialogue — one card, docked bottom-left */
+#panel{position:fixed;left:20px;bottom:20px;z-index:40;width:min(380px,calc(100vw - 40px));display:flex;flex-direction:column;align-items:flex-start;gap:8px;transition:transform .35s cubic-bezier(.4,0,.2,1)}
+#panel.hidden{transform:translateX(calc(-100% - 20px))}
+#panel.peek #speech{opacity:.25;transition:opacity .2s}
+#speech{width:100%;background:rgba(25,28,30,.94);backdrop-filter:blur(20px);border:1px solid var(--hairline);border-radius:5px;padding:16px 18px;display:none;max-height:min(64vh,560px);overflow-y:auto;scrollbar-width:thin;transition:opacity .35s}
+#speech.on{display:block}
+#speech::-webkit-scrollbar{width:3px}
+#speech::-webkit-scrollbar-thumb{background:var(--byd-blue-dim)}
+#speech .who{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+#speech .who b{font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--byd-blue);font-weight:600}
+#speech .who i{flex:1;height:1px;background:var(--hairline)}
+#speech .who em{font-style:normal;font-size:.55rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);font-weight:500}
+#line{font-size:.9rem;line-height:1.72;color:rgba(255,255,255,.92)}
+.split{height:1px;background:var(--hairline);margin:14px 0 11px}
+.dots span{display:inline-block;width:5px;height:5px;margin-right:4px;border-radius:50%;background:var(--byd-blue);animation:pulse 1.3s infinite}
+.dots span:nth-child(2){animation-delay:.18s}.dots span:nth-child(3){animation-delay:.36s}
+@keyframes pulse{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+#chips{display:flex;flex-direction:column;gap:6px;margin-top:13px}
+.chip{background:var(--byd-blue-soft);border:1px solid var(--byd-blue-dim);color:#cbe6fa;border-radius:3px;padding:10px 13px;font-size:.79rem;line-height:1.4;text-align:left;transition:.16s;font-weight:400}
+.chip:hover{background:rgba(64,162,227,.2);border-color:var(--byd-blue);color:var(--white)}
+.chip.alt{background:rgba(255,255,255,.04);border-color:var(--hairline);color:var(--ink)}
+.chip.alt:hover{color:var(--white);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.07)}
+.chip.primary{background:var(--byd-blue);border-color:var(--byd-blue);color:#08243a;font-weight:600}
+.chip.primary:hover{background:#5cb3ea;color:#08243a}
+
+#heard{font-size:.72rem;color:var(--ink);min-height:0;font-style:italic;line-height:1.5}
+#heard:not(:empty){margin-bottom:7px}
+#meter{height:2px;width:100%;background:rgba(255,255,255,.09);overflow:hidden;opacity:0;transition:opacity .25s;margin-bottom:7px}
+#meter.on{opacity:1}
+#meter i{display:block;height:100%;width:0;background:var(--byd-blue);transition:width .07s linear}
+#meter.quiet i{background:var(--byd-red)}
+
+#row{display:flex;gap:6px;align-items:center;background:rgba(0,0,0,.3);border:1px solid var(--hairline);border-radius:3px;padding:4px 4px 4px 12px}
+#row:focus-within{border-color:var(--byd-blue-dim)}
+#msg{flex:1;background:none;border:none;color:var(--white);font-size:.83rem;padding:8px 0;min-width:0}
+#msg::placeholder{color:var(--ink-dim)}
+.act{padding:8px 12px;border-radius:3px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;white-space:nowrap;transition:.18s}
+#send{background:var(--byd-blue-soft);color:var(--byd-blue)}
+#send:hover{background:rgba(64,162,227,.24)}
+#mic{background:rgba(255,255,255,.06);display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:3px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+#mic:hover{background:rgba(255,255,255,.12)}
+#mic .led{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4)}
+#mic.live{background:rgba(215,12,25,.16);color:#ff8189}
+#mic.live .led{background:var(--byd-red);animation:live 1.3s infinite}
+#mic.off{opacity:.4;cursor:not-allowed}
+@keyframes live{to{box-shadow:0 0 0 9px rgba(215,12,25,0)}}
+#mictip{font-size:.57rem;color:var(--ink-dim);margin-top:7px;letter-spacing:.08em;text-transform:uppercase}
+
+#collapse{background:rgba(25,28,30,.9);backdrop-filter:blur(12px);border:1px solid var(--hairline);border-radius:3px;padding:6px 11px;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);transition:.18s;font-weight:500}
+#collapse:hover{color:var(--white);border-color:var(--byd-blue-dim)}
+#panel.hidden #collapse{position:absolute;left:calc(100% + 28px);bottom:0;transform:none}
+
+/* Loadshedding overlay */
+#shed{position:fixed;inset:0;z-index:35;pointer-events:none;opacity:0;transition:opacity 1s;background:radial-gradient(ellipse at 50% 60%,transparent 20%,rgba(0,0,0,.8) 75%)}
+#shed.on{opacity:1}
+#shedcap{position:fixed;top:20%;left:50%;transform:translateX(-50%);z-index:36;text-align:center;opacity:0;transition:opacity .8s;pointer-events:none;width:100%;padding:0 20px}
+#shedcap.on{opacity:1}
+#shedcap .big{font-weight:300;font-size:clamp(1.3rem,4.2vw,1.9rem);letter-spacing:-.01em}
+#shedcap .sm{font-size:.62rem;letter-spacing:.26em;text-transform:uppercase;color:var(--byd-blue);margin-top:9px;font-weight:600}
+#appliances{display:flex;gap:24px;justify-content:center;margin-top:26px;flex-wrap:wrap}
+.app{opacity:0;transform:translateY(8px);transition:.5s}
+.app.on{opacity:1;transform:none}
+.app .ic{font-size:1.5rem;filter:drop-shadow(0 0 12px rgba(64,162,227,.8))}
+.app .t{font-size:.55rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin-top:6px;font-weight:500}
+
+/* Summary + lead capture */
+#lead{position:fixed;inset:0;z-index:190;background:rgba(14,16,18,.94);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+#lead.on{display:flex}
+#lead .box{background:var(--surface);border:1px solid var(--hairline);border-radius:6px;max-width:520px;width:100%;overflow:hidden;margin:auto}
+#lead .head{padding:24px 28px 20px;border-bottom:1px solid var(--hairline)}
+#lead .head .logo{height:22px;margin-bottom:16px}
+#lead h2{font-weight:600;font-size:1.24rem;letter-spacing:-.015em}
+#lead .head p{font-size:.85rem;color:var(--ink);line-height:1.65;margin-top:8px}
+#lead .body{padding:22px 28px 26px}
+
+.recap{background:var(--surface-2);border-radius:4px;padding:16px 18px;margin-bottom:22px}
+.recap .car{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--hairline)}
+.recap .car b{font-size:.98rem;font-weight:600}
+.recap .car span{color:var(--byd-blue);font-size:.9rem;font-weight:500;white-space:nowrap}
+.recap dl{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;margin-top:12px;font-size:.76rem}
+.recap dt{color:var(--ink-dim);text-transform:uppercase;letter-spacing:.08em;font-size:.62rem;font-weight:500;align-self:center}
+.recap dd{text-align:right;font-weight:500}
+.recap .covered{margin-top:13px;padding-top:12px;border-top:1px solid var(--hairline);font-size:.74rem;color:var(--ink);line-height:1.6}
+.recap .covered b{color:var(--white);font-weight:500}
+
+.brochure{display:flex;align-items:center;gap:13px;background:var(--byd-blue-soft);border:1px solid var(--byd-blue-dim);border-radius:4px;padding:13px 16px;margin-bottom:22px;text-decoration:none;color:inherit;transition:.18s}
+.brochure:hover{background:rgba(64,162,227,.18);border-color:var(--byd-blue)}
+.brochure .ic{font-size:1.2rem;flex:none}
+.brochure .tx{flex:1;min-width:0}
+.brochure .tx b{display:block;font-size:.82rem;font-weight:500}
+.brochure .tx span{display:block;font-size:.68rem;color:var(--ink);margin-top:2px}
+.brochure .go{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--byd-blue);font-weight:600;flex:none}
+
+#lead label{display:block;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:6px;margin-top:15px;font-weight:600}
+#lead .fields{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+#lead .fields .wide{grid-column:1/-1}
+#lead input,#lead select{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--hairline);border-radius:3px;padding:11px 12px;color:var(--white);font-family:inherit;font-size:.87rem}
+#lead input:focus,#lead select:focus{border-color:var(--byd-blue-dim)}
+#lead input::placeholder{color:var(--ink-dim)}
+#lead .btns{display:flex;gap:10px;margin-top:24px}
+#lead .go2{flex:1;background:var(--byd-blue);color:#08243a;padding:14px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.72rem;border-radius:3px;transition:.18s}
+#lead .go2:hover{background:#5cb3ea}
+#lead .no{padding:14px 18px;color:var(--ink);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+#lead .no:hover{color:var(--white)}
+#lead .fine{font-size:.63rem;color:var(--ink-dim);margin-top:16px;line-height:1.6}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%);z-index:60;background:var(--surface-2);border:1px solid var(--hairline);border-left:2px solid var(--byd-blue);color:rgba(255,255,255,.9);padding:12px 18px;border-radius:3px;font-size:.76rem;opacity:0;transition:opacity .3s;pointer-events:none;max-width:min(480px,88vw);text-align:left;line-height:1.6;top:78px}
+#toast.on{opacity:1}
+#credit{position:fixed;bottom:5px;left:11px;font-size:.54rem;color:rgba(255,255,255,.2);z-index:21;pointer-events:none}
+#hint{position:fixed;bottom:calc(50% - 120px);left:50%;transform:translateX(-50%);font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.42);z-index:24;opacity:0;transition:opacity .5s;pointer-events:none;font-weight:500}
+#hint.on{opacity:1}
+
+@media(max-width:820px){
+  #rail{right:12px;gap:0}
+  #rail .lbl{display:none}
+  #top{padding:12px 14px}
+  .tool{padding:7px 9px;font-size:.56rem}
+  #panel{left:10px;right:10px;bottom:10px;width:auto}
+  #panel.hidden{transform:translateY(calc(100% - 30px))}
+  #panel.hidden #collapse{position:static;left:auto}
+  #speech{max-height:44vh;padding:13px 15px}
+  #line{font-size:.86rem}
+  .spot .tag{font-size:.55rem;left:26px}
+  #collapse{align-self:flex-end}
+}
+@media(max-height:620px){
+  #speech{max-height:52vh}
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <div>
+    <img src="assets/BYD-logo.png" alt="BYD" class="logo" style="height:38px;margin:0 auto">
+    <div class="sub">Guided Walkaround</div>
+  </div>
+  <div class="tideline" style="width:min(400px,78vw)"></div>
+  <div id="bar"><i></i></div>
+  <div id="bootnote">Loading vehicles…</div>
+  <div id="booterr"></div>
+</div>
+
+<div id="pick">
+  <img src="assets/BYD-logo.png" alt="BYD" class="logo">
+  <div class="kicker">South Africa</div>
+  <h1>Which one shall Naledi show you?</h1>
+  <div class="cars" id="carlist"></div>
+  <p style="color:var(--ink-dim);font-size:.75rem;max-width:42ch;line-height:1.7;margin-top:8px">
+    About four minutes. She'll walk you round the car and you choose where to go next.
+  </p>
+</div>
+
+<div id="stage">
+  <div id="top">
+    <div class="lockup">
+      <img src="assets/BYD-logo.png" alt="BYD" class="logo">
+      <div class="divider"></div>
+      <div class="vh" id="vehname">—<small>Guided walkaround</small></div>
+    </div>
+    <div id="tools">
+      <button class="tool aistat dead" id="aibadge" title="Checking…">Checking</button>
+      <button class="tool" id="plainbtn" title="Explain without car jargon">Plain English</button>
+      <button class="tool" id="mutebtn" title="Naledi's voice">Voice on</button>
+      <button class="tool" id="switchbtn">Other model</button>
+    </div>
+  </div>
+  <div id="rail"></div>
+</div>
+
+<div id="hint">Drag to look around</div>
+
+<div id="shed"></div>
+<div id="shedcap">
+  <div class="big" id="shedtext">Stage 4. The lights are gone.</div>
+  <div class="sm">Vehicle to Load</div>
+  <div id="appliances">
+    <div class="app" id="a1"><div class="ic">💡</div><div class="t">Lights</div></div>
+    <div class="app" id="a2"><div class="ic">📶</div><div class="t">Wi-Fi</div></div>
+    <div class="app" id="a3"><div class="ic">🧊</div><div class="t">Fridge</div></div>
+    <div class="app" id="a4"><div class="ic">☕</div><div class="t">Kettle</div></div>
+  </div>
+</div>
+
+<div id="panel">
+  <div id="speech">
+    <div class="who"><b>Naledi</b><i></i><em id="stoplbl"></em></div>
+    <div id="line"></div>
+    <div id="chips"></div>
+    <div class="split"></div>
+    <div id="heard"></div>
+    <div id="meter"><i></i></div>
+    <div id="row">
+      <input id="msg" placeholder="Ask her anything…" autocomplete="off">
+      <button id="mic" title="Hold V to talk"><span class="led"></span><span id="mic-label">Talk</span></button>
+      <button id="send" class="act">Ask</button>
+    </div>
+    <div id="mictip"></div>
+  </div>
+  <button id="collapse" title="Hide panel">Hide</button>
+</div>
+
+<div id="lead"><div class="box">
+  <div class="head">
+    <img src="assets/BYD-logo.png" alt="BYD" class="logo">
+    <h2 id="leadhead">Your walkaround summary</h2>
+    <p id="leadsub">Here's what we covered. Download the full specification, and I can send this through with your nearest dealer's details.</p>
+  </div>
+  <div class="body">
+    <div class="recap" id="leadsum"></div>
+    <a class="brochure" id="brochure" href="#" download>
+      <span class="ic">&#128196;</span>
+      <span class="tx"><b id="brochurename">Specification brochure</b><span id="brochuremeta">Official BYD South Africa PDF</span></span>
+      <span class="go">Download</span>
+    </a>
+    <div class="fields">
+      <div><label for="lname">Name</label><input id="lname" placeholder="Thabo Mokoena"></div>
+      <div><label for="lphone">Mobile <span style="text-transform:none;letter-spacing:0">(optional)</span></label><input id="lphone" placeholder="082 000 0000"></div>
+      <div class="wide"><label for="lmail">Email</label><input id="lmail" type="email" placeholder="thabo@example.co.za"></div>
+      <div><label for="lcity">Nearest dealer</label>
+        <select id="lcity">
+          <option>Sandton</option><option>Cape Town</option><option>Umhlanga</option>
+          <option>Pretoria</option><option>Gqeberha</option><option>Bloemfontein</option>
+        </select>
+      </div>
+      <div><label for="lwhen">Timeframe</label>
+        <select id="lwhen">
+          <option>Just looking for now</option><option>Within 3 months</option>
+          <option>Within 6 months</option><option>Ready to talk numbers</option>
+        </select>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="go2" id="leadgo">Send me the summary</button>
+      <button class="no" id="leadno">Not now</button>
+    </div>
+    <div class="fine">Demo only &mdash; details are written to a local file on this machine and nothing is emailed. Specifications from official BYD South Africa material; BYD reserves the right to vary them.</div>
+  </div>
+</div></div>
+
+<div id="toast"></div>
+<div id="credit">Models by Ddiaz Design (Sketchfab) · CC BY-NC-SA 4.0 · Demo, not an official BYD product</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const el = id => document.getElementById(id);
+const log = (...a)=>console.log('%c[byd]','color:#40A2E3',...a);
+
+/* ════════════════ VEHICLES ════════════════
+   modelYaw rotates the mesh so its nose points to +Z, which is the frame
+   every hotspot below is defined in. If the hotspots land on the wrong
+   end of the car, press [ or ] to correct it live, then copy the value here. */
+const FLEET = {
+  seal: {
+    file:'models/2024_byd_seal.glb', modelYaw:0, length:4.80,
+    brochure:'brochures/BYD-Seal-Specifications-SA.pdf',
+    name:'BYD Seal', trim:'Premium · Extended Range', price:'R1 007 900',
+    blurb:'Electric sedan. 570 km range, rear-wheel drive.',
+    specs:{ Battery:'82.56 kWh Blade', Range:'570 km WLTP', Power:'230 kW / 360 Nm',
+            '0\u2013100':'5.9 s', Charging:'150 kW DC', Boot:'400 L + 50 L frunk' },
+    extra:'Drag coefficient 0.219 Cd. Double wishbone front, multi-link rear. 15.6-inch rotating touchscreen, DYNAUDIO 12 speakers, head-up display. 235/45 R19. Colours: Sky Black, Atlantis Gray, Aurora White, North Ice Blue, Rosemary Gray, Wind Grass Green.',
+    topTrim:'The AWD Performance is R1 211 900 \u2014 390 kilowatts, 670 newton metres, nought to a hundred in 3.8 seconds, 520 kilometres WLTP.'
+  },
+  sealion7: {
+    file:'models/2024_byd_sealion_7.glb', modelYaw:0, length:4.83,
+    brochure:'brochures/BYD-Sealion-7-Specifications-SA.pdf',
+    name:'BYD Sealion 7', trim:'Premium', price:'R1 109 900',
+    blurb:'Coup\u00e9-styled electric SUV. 482 km range, 500 litre boot.',
+    specs:{ Battery:'82.56 kWh Blade', Range:'482 km WLTP', Power:'230 kW / 380 Nm',
+            '0\u2013100':'6.7 s', Charging:'150 kW DC', Boot:'500 L + 58 L frunk' },
+    extra:'Consumption 19.8 kWh/100 km. Boot expands to 1 769 litres. Panoramic sunroof, 15.6-inch rotating touchscreen, Dynaudio 12 speakers, ventilated and heated front seats. 235/50 R19. Colours: Aurora White, Cosmos Black, Urban Grey, Atlantis Grey.',
+    topTrim:'The Performance AWD is R1 299 900 \u2014 390 kilowatts, 690 newton metres, nought to a hundred in 4.5 seconds, Nappa leather, 456 kilometres WLTP.'
+  }
+};
+
+/* ════════════════ THE WALKAROUND ════════════════
+   Six stops, each built around an objection rather than a body panel.
+   `pro` is how she'd talk to someone who knows cars. `plain` is the same
+   point with the jargon stripped out. Both are authored, so they're
+   instant and never hallucinate — the AI handles free questions only. */
+const STOPS = [
+  {
+    id:'stance', label:'First look', rail:'Stance',
+    cam:{ az:38, el:11, dist:8.2 }, spot:null,
+    pro:c=>`So this is the ${c.name}. ${c.trim} trim, ${c.price} on the road. What I'd say first is just look at how low and wide it sits — no engine up front means the designers could push the cabin forward and drop the nose.`,
+    plain:c=>`This is the ${c.name} — ${c.price}. Because there's no petrol engine taking up space at the front, the designers could make the shape lower and smoother than a normal car. That's not just looks: it helps it slip through the air, which means more distance per charge.`,
+    chips:[
+      {t:"Won't a Chinese car be a risk?", go:'trust'},
+      {t:'Show me how it charges', go:'charge'},
+      {t:'What happens during loadshedding?', go:'v2l'}
+    ]
+  },
+  {
+    id:'charge', label:'Charging', rail:'Charging', station:'rear',
+    cam:{ az:150, el:14, dist:5.4 }, spot:{ x:-0.46, y:0.55, z:-0.30, tag:'Charge port' },
+    pro:c=>`Charge port's here on the rear quarter. It takes 150 kilowatt DC, so 20 to 80 percent is about half an hour on a fast charger. At home you get a 7 kilowatt wallbox included — plug in overnight, wake up full.`,
+    plain:c=>`This little door is where you plug it in. Two ways: at home, on a charger BYD fits in your garage for free with the car — you plug in at night like a phone and it's full by morning. Or at a public fast charger, where it takes about half an hour to go from nearly empty to mostly full. That's a coffee, not a wait.`,
+    chips:[
+      {t:'What does a full charge cost?', go:null, ask:'What does it cost to charge at home in South Africa?'},
+      {t:'Are there enough public chargers?', go:null, ask:'Are there enough public chargers in South Africa?'},
+      {t:'And during loadshedding?', go:'v2l'}
+    ]
+  },
+  {
+    id:'v2l', label:'Loadshedding', rail:'Loadshedding', theatre:'shed', station:'rear',
+    cam:{ az:196, el:9, dist:5.6 }, spot:{ x:0.30, y:0.48, z:-0.50, tag:'V2L socket' },
+    pro:c=>`Now this is the one that lands in South Africa. V2L — vehicle to load. There's an adapter that turns this port into a plug socket, pulling from an 82 kilowatt-hour battery. That's roughly four days of a normal household's essentials.`,
+    plain:c=>`Here's the part I'd tell my own family about. The battery in this car is about sixty times bigger than a normal home inverter battery. With the adapter that comes with it, the car becomes your backup power — lights, Wi-Fi, the fridge, even the kettle. Stage 6 stops being a crisis and becomes an inconvenience. Most people buy an inverter and a car. This is both.`,
+    chips:[
+      {t:'How long can it actually run my house?', go:null, ask:'Realistically how long can the V2L run a normal South African household?'},
+      {t:'Does that wreck the battery?', go:null, ask:'Does using V2L damage the battery or the warranty?'},
+      {t:'Tell me about the battery itself', go:'battery'}
+    ]
+  },
+  {
+    id:'battery', label:'The battery', rail:'Battery',
+    cam:{ az:270, el:4, dist:5.0 }, spot:{ x:-0.52, y:0.22, z:0.02, tag:'Blade Battery — under the floor' },
+    pro:c=>`Under your feet, running the length of the floor, is the Blade Battery. Lithium iron phosphate, not the nickel chemistry most rivals use. It runs cooler, it doesn't use cobalt, and it's structural — it stiffens the whole shell. Eight year warranty on it.`,
+    plain:c=>`The battery isn't a box in the boot — it's a flat slab under the floor, running the whole length of the car. Two things worth knowing. First, it uses a chemistry that's much harder to set alight than the type in most electric cars; BYD famously drove a nail through one to prove it. Second, it's built into the structure, so the car is stiffer and safer in a crash. Eight year warranty.`,
+    chips:[
+      {t:'How long before it degrades?', go:null, ask:'How much does the battery degrade over time and what does the warranty cover?'},
+      {t:'What is it worth in five years?', go:'trust'},
+      {t:'How far can it really go?', go:null, ask:'What is the realistic real-world range, not the WLTP claim?'}
+    ]
+  },
+  {
+    id:'practical', label:'Everyday use', rail:'Practical',
+    cam:{ az:8, el:16, dist:5.8 }, spot:{ x:0.0, y:0.60, z:0.52, tag:'Front boot' },
+    pro:c=>`No engine means storage where the engine used to be — 58 litres up front. Perfect home for your charging cables so they're not rolling round the boot. ${c.specs.Boot ? 'Then '+c.specs.Boot.split(' + ')[0]+' behind.' : ''}`,
+    plain:c=>`Because there's no engine, there's a second boot under the bonnet. It's small — about a cabin bag — but it's exactly where the charging cables live, so they're not tangled in with your shopping. Everything a petrol car does on a weekly basis, this does, except you stop going to the petrol station.`,
+    chips:[
+      {t:'What does it cost to run per month?', go:null, ask:'What does the car cost to run per month compared to a petrol car?'},
+      {t:'Can it do Joburg to Durban?', go:null, ask:'Can it do Johannesburg to Durban and where would I charge?'},
+      {t:'What about servicing?', go:null, ask:'What servicing does an EV need and what does BYD include?'}
+    ]
+  },
+  {
+    id:'trust', label:'The brand', rail:'The brand',
+    cam:{ az:325, el:10, dist:6.4 }, spot:{ x:0.0, y:0.72, z:0.48, tag:'BYD' },
+    pro:c=>`People ask me this every day, so let me answer it straight. BYD started as a battery company in 1995 — they made the cells before they made cars. They now build more electric vehicles than anyone on earth, and they make their own batteries, which almost nobody else does. Five year warranty, eight on the battery, five year maintenance plan included.`,
+    plain:c=>`I'll be honest — everyone asks me whether a Chinese car is a gamble. Fair question. BYD spent ten years making batteries for phones before they made a single car, and today they build more electric cars than any company in the world, including Tesla. They make their own batteries, which even most European brands don't. And the warranty is five years, eight on the battery, with servicing included. The risk sits with them, not you.`,
+    chips:[
+      {t:'Where are the dealers?', go:null, ask:'Where are the BYD dealers in South Africa and what about parts?'},
+      {t:'What about resale value?', go:null, ask:'What is the resale value of a BYD in South Africa likely to be?'},
+      {t:'I think I want one', go:'close'}
+    ]
+  },
+  {
+    id:'close', label:'Next step', rail:'Next step', isClose:true,
+    cam:{ az:44, el:13, dist:7.6 }, spot:null,
+    pro:c=>`That's the walkaround done. I've put together a summary of everything we covered, and you can download the full ${c.name} specification while you're here.`,
+    plain:c=>`That's us finished. I've pulled together a summary of everything we went through, and there's the official specification sheet to download so you have the detail in writing.`,
+    chips:[
+      {t:'Show me the summary', act:'lead', primary:true},
+      {t:'Show me the other model', act:'switch'},
+      {t:'Start again', go:'stance'}
+    ]
+  }
+];
+
+const SHARED_FACTS = `Warranty: 5 years/100 000 km vehicle, 8 years/150 000 km battery, 5 year/100 000 km maintenance plan included. A 7 kW home wallbox and a 2.2 kW portable charger come with the car. V2L standard. Eskom home tariff averages about R2.72/kWh. BYD SA dealers: Sandton, Cape Town, Umhlanga, Pretoria, Port Elizabeth, Bloemfontein and growing.`;
+
+/* ════════════════ RENDERER ════════════════ */
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0E1012);
+scene.fog = new THREE.Fog(0x0E1012, 22, 55);
+const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.05, 140);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const hemi = new THREE.HemisphereLight(0x9dc4dd, 0x14171a, 0.5);
+scene.add(hemi);
+const key = new THREE.DirectionalLight(0xdff0ff, 1.15);
+key.position.set(6,13,7); key.castShadow = true;
+key.shadow.mapSize.set(2048,2048);
+key.shadow.camera.near=1; key.shadow.camera.far=40;
+key.shadow.camera.left=-12; key.shadow.camera.right=12;
+key.shadow.camera.top=12; key.shadow.camera.bottom=-12;
+key.shadow.bias=-0.0006;
+scene.add(key);
+
+const floor = new THREE.Mesh(new THREE.CircleGeometry(30,72),
+  new THREE.MeshStandardMaterial({ color:0x121416, metalness:0.62, roughness:0.22 }));
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
+
+const DAIS_TOP = 0.14;          // podium surface height; Naledi stands on this
+const dais = new THREE.Mesh(new THREE.CylinderGeometry(4.3,4.45,0.14,72),
+  new THREE.MeshStandardMaterial({ color:0x1e2225, metalness:0.5, roughness:0.34 }));
+dais.position.y = 0.07; dais.receiveShadow = true; scene.add(dais);
+
+const daisRing = new THREE.Mesh(new THREE.RingGeometry(4.32,4.5,80),
+  new THREE.MeshBasicMaterial({ color:0x40A2E3, transparent:true, opacity:.5, side:THREE.DoubleSide }));
+daisRing.rotation.x = -Math.PI/2; daisRing.position.y = 0.15; scene.add(daisRing);
+
+/* Spotlights */
+const spots = [];
+for(const a of [0, 120, 240]){
+  const s = new THREE.SpotLight(0xfff6e8, 110, 22, Math.PI/6.5, .55, 1.6);
+  s.position.set(Math.sin(a*Math.PI/180)*5.5, 7.4, Math.cos(a*Math.PI/180)*5.5);
+  s.target.position.set(0,0.6,0);
+  s.castShadow = true; s.shadow.mapSize.set(1024,1024); s.shadow.bias=-0.0008;
+  scene.add(s, s.target); spots.push(s);
+}
+const rim = new THREE.PointLight(0x40A2E3, 34, 26, 2);
+rim.position.set(0, 2.4, -9); scene.add(rim);
+
+/* Backdrop ring wall */
+const wallMat = new THREE.MeshStandardMaterial({ color:0x252728, metalness:.2, roughness:.9, side:THREE.BackSide });
+const wall = new THREE.Mesh(new THREE.CylinderGeometry(26,26,14,48,1,true), wallMat);
+wall.position.y = 7; scene.add(wall);
+const tideMat = new THREE.MeshBasicMaterial({ color:0x40A2E3, side:THREE.BackSide, transparent:true, opacity:.5 });
+for(let i=0;i<2;i++){
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(25.6,25.6,0.05,48,1,true), tideMat);
+  t.position.y = 3.2 + i*0.55; scene.add(t);
+}
+
+/* ════════════════ NALEDI ════════════════
+   Mixamo character, five clips: idle, walk, talk, point, wave.
+   The model is authored in centimetres with a 0.01 root scale, so we
+   normalise by measured height rather than trusting either. */
+const naledi = new THREE.Group();
+scene.add(naledi);
+
+const NALEDI = {
+  ready:false, mixer:null, actions:{}, current:null,
+  root:null, head:null, spine:null, rightArm:null,
+  height:1.70, stride:1.0
+};
+
+const TARGET_HEIGHT = 1.70;   // metres
+const CLIP_FADE = 0.28;       // seconds of cross-fade between states
+
+/* Auto-sizing measures her bounding box, which can misread on a skinned
+   mesh because the skeleton carries its own scale. If she loads at the
+   wrong size, press - and = in the showroom until she looks right, then
+   put the number the toast gives you here. null = measure automatically. */
+const CHARACTER_SCALE = 1;
+
+function loadNaledi(){
+  return new Promise(resolve=>{
+    new GLTFLoader().load('character/Naledi.glb', gltf=>{
+      const root = gltf.scene;
+
+      // Normalise scale from actual rendered size. Measure AFTER forcing
+      // a world-matrix update, and log it — Mixamo files disagree about
+      // units and the root node often carries its own scale already.
+      root.updateWorldMatrix(true, true);
+      const rawBox = new THREE.Box3().setFromObject(root);
+      const rawSize = rawBox.getSize(new THREE.Vector3());
+      log('character raw size:',
+          rawSize.x.toFixed(3), rawSize.y.toFixed(3), rawSize.z.toFixed(3),
+          '| root scale', root.scale.x.toFixed(4));
+
+      // Height is the Y extent. In a T-pose X is wider than Y, so never
+      // fall back to the largest axis.
+      let s = 1;
+      if(CHARACTER_SCALE !== null){
+        s = CHARACTER_SCALE / (root.scale.x || 1);
+        log('using manual CHARACTER_SCALE', CHARACTER_SCALE);
+      } else if(rawSize.y > 0.0001){
+        s = TARGET_HEIGHT / rawSize.y;
+      } else {
+        log('WARNING: could not measure height, leaving scale alone');
+      }
+      root.scale.multiplyScalar(s);
+      log('scale factor applied:', s.toFixed(4));
+
+      // Feet on the podium, centred on the origin. The dais top sits at
+      // DAIS_TOP, so placing her at y=0 buries her feet in it.
+      root.updateWorldMatrix(true, true);
+      const box2 = new THREE.Box3().setFromObject(root);
+      const c = box2.getCenter(new THREE.Vector3());
+      root.position.x -= c.x;
+      root.position.z -= c.z;
+      root.position.y -= box2.min.y;
+      naledi.position.y = DAIS_TOP;
+
+      const finalBox = new THREE.Box3().setFromObject(root);
+      const fs = finalBox.getSize(new THREE.Vector3());
+      log('character final height:', fs.y.toFixed(2) + 'm',
+          '(target ' + TARGET_HEIGHT + 'm)');
+      if(fs.y > TARGET_HEIGHT*1.5 || fs.y < TARGET_HEIGHT*0.5){
+        log('WARNING: height is off. Press - / = to resize her live.');
+      }
+
+      root.traverse(o=>{
+        if(o.isMesh || o.isSkinnedMesh){
+          o.castShadow = true;
+          o.receiveShadow = true;
+          o.frustumCulled = false;   // skinned bounds go stale mid-animation
+          if(o.material){
+            o.material.envMapIntensity = 0.9;
+            if(o.material.roughness !== undefined && o.material.roughness < 0.25)
+              o.material.roughness = 0.45;   // Mixamo skin can read too glossy
+          }
+        }
+        // Mixamo bone names are stable across every download.
+        if(o.isBone){
+          if(/Head$/i.test(o.name) && !NALEDI.head) NALEDI.head = o;
+          if(/Spine1$|Spine2$/i.test(o.name) && !NALEDI.spine) NALEDI.spine = o;
+          if(/RightArm$/i.test(o.name) && !NALEDI.rightArm) NALEDI.rightArm = o;
+        }
+      });
+
+      naledi.add(root);
+      NALEDI.root = root;
+      NALEDI.height = TARGET_HEIGHT;
+
+      // Animation clips
+      NALEDI.mixer = new THREE.AnimationMixer(root);
+      gltf.animations.forEach(clip=>{
+        const key = clip.name.toLowerCase().trim();
+        const a = NALEDI.mixer.clipAction(clip);
+        a.enabled = true;
+        a.setEffectiveWeight(0);
+        if(key === 'wave' || key === 'point'){
+          a.setLoop(THREE.LoopRepeat);
+        }
+        NALEDI.actions[key] = a;
+        if(key === 'walk') NALEDI.stride = clip.duration;
+      });
+
+      log('character clips:', Object.keys(NALEDI.actions).join(', '),
+          '| stride', NALEDI.stride.toFixed(3) + 's');
+
+      if(!NALEDI.actions.idle){
+        log('WARNING: no "idle" clip found — check the clip names in Blender.');
+      }
+      NALEDI.ready = true;
+      playClip('idle', 0);
+      resolve(true);
+    }, undefined, err=>{
+      console.error('Naledi failed to load', err);
+      toast('The presenter model did not load. Check character/Naledi.glb exists.', 8000);
+      resolve(false);
+    });
+  });
+}
+
+/* Cross-fade to a clip. Repeated calls for the same clip are ignored. */
+function playClip(name, fade = CLIP_FADE){
+  if(!NALEDI.ready && name !== 'idle') return;
+  const next = NALEDI.actions[name];
+  if(!next || NALEDI.current === name) return;
+  const prev = NALEDI.actions[NALEDI.current];
+
+  next.reset();
+  next.setEffectiveTimeScale(1);
+  next.setEffectiveWeight(1);
+  next.play();
+  if(prev && prev !== next) prev.crossFadeTo(next, fade, false);
+  NALEDI.current = name;
+}
+
+/* Pick the clip that matches what she's doing right now.
+   Pointing is tied to speech — holding the pose in silence looks frozen,
+   so she relaxes to idle and only her head stays on the hotspot. */
+function chooseClip(moving){
+  if(!NALEDI.ready) return;
+  if(moving)                 return playClip('walk');
+  if(gesturing)              return playClip('wave');
+  if(pointAt && speakingNow) return playClip('point');
+  if(speakingNow)            return playClip('talk');
+  playClip('idle');
+}
+
+let gesturing = false;
+function waveHello(ms = 2600){
+  if(!NALEDI.actions.wave) return;
+  gesturing = true;
+  chooseClip(false);
+  setTimeout(()=>{ gesturing = false; chooseClip(false); }, ms);
+}
+
+/* ════════════════ CAR LOADING ════════════════ */
+const loader = new GLTFLoader();
+const loaded = {};
+const carGroup = new THREE.Group();
+scene.add(carGroup);
+let active = null, activeKey = null, carLen = 4.8, carWid = 1.9, carHi = 1.5;
+
+function loadCar(k, onProg){
+  return new Promise(res=>{
+    const cfg = FLEET[k];
+    loader.load(cfg.file, gltf=>{
+      const root = gltf.scene;
+      const b1 = new THREE.Box3().setFromObject(root);
+      const sz = b1.getSize(new THREE.Vector3());
+      root.scale.setScalar(cfg.length / Math.max(sz.x, sz.z));
+      const b2 = new THREE.Box3().setFromObject(root);
+      const c = b2.getCenter(new THREE.Vector3());
+      root.position.sub(new THREE.Vector3(c.x, b2.min.y - 0.14, c.z));
+      root.traverse(o=>{
+        if(o.isMesh){
+          o.castShadow = o.receiveShadow = true;
+          if(o.material?.isMeshStandardMaterial){
+            o.material.envMapIntensity = 1.4;
+            if(o.material.transmission > 0) o.material.side = THREE.FrontSide;
+          }
+        }
+      });
+      const yawWrap = new THREE.Group();
+      yawWrap.add(root);
+      yawWrap.rotation.y = cfg.modelYaw * Math.PI/180;
+      const holder = new THREE.Group();
+      holder.add(yawWrap);
+      holder.visible = false;
+      holder.userData = { yawWrap, box:new THREE.Box3().setFromObject(root) };
+      carGroup.add(holder);
+      loaded[k] = holder;
+      res(true);
+    }, xhr=>{ if(xhr.total) onProg(xhr.loaded/xhr.total); }, err=>{
+      console.error('load failed', cfg.file, err); res(false);
+    });
+  });
+}
+
+function showCar(k){
+  Object.values(loaded).forEach(h=>h.visible = false);
+  if(!loaded[k]) return;
+  loaded[k].visible = true;
+  active = loaded[k]; activeKey = k;
+  const bb = new THREE.Box3().setFromObject(active);
+  const sz = bb.getSize(new THREE.Vector3());
+  carLen = Math.max(sz.x,sz.z); carWid = Math.min(sz.x,sz.z); carHi = sz.y;
+  el('vehname').textContent = FLEET[k].name + ' · ' + FLEET[k].trim;
+}
+
+/* Hotspot fractions → world position */
+function spotPos(s){
+  if(!s) return null;
+  return new THREE.Vector3(s.x*carWid, s.y*carHi, s.z*carLen);
+}
+
+/* ════════════════ CAMERA ════════════════ */
+const cam = { az:38, el:12, dist:8.2, tx:0, ty:0.75, tz:0 };
+const want = { ...cam };
+let dragging = false, lastX=0, lastY=0, userMoved=false, idleSpin=0;
+
+function setShot(stop){
+  want.az = stop.cam.az; want.el = stop.cam.el; want.dist = stop.cam.dist;
+  const p = spotPos(stop.spot);
+  want.tx = p ? p.x*0.55 : 0;
+  want.ty = p ? Math.max(0.5, p.y*0.85) : 0.8;
+  want.tz = p ? p.z*0.55 : 0;
+  userMoved = false;
+}
+
+renderer.domElement.addEventListener('pointerdown', e=>{
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+  renderer.domElement.setPointerCapture(e.pointerId);
+  el('hint').classList.remove('on');
+  el('panel').classList.add('peek');
+});
+renderer.domElement.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  want.az -= (e.clientX - lastX) * 0.32;
+  want.el = Math.max(-4, Math.min(52, want.el + (e.clientY - lastY) * 0.22));
+  lastX = e.clientX; lastY = e.clientY;
+  userMoved = true; idleSpin = 0;
+});
+addEventListener('pointerup', ()=>{ dragging = false; el('panel').classList.remove('peek'); });
+renderer.domElement.addEventListener('wheel', e=>{
+  e.preventDefault();
+  want.dist = Math.max(3.4, Math.min(13, want.dist + e.deltaY*0.004));
+  userMoved = true;
+}, { passive:false });
+
+/* pinch */
+let pinch = 0;
+renderer.domElement.addEventListener('touchmove', e=>{
+  if(e.touches.length !== 2) return;
+  const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+  if(pinch) { want.dist = Math.max(3.4, Math.min(13, want.dist + (pinch-d)*0.012)); userMoved = true; }
+  pinch = d;
+}, { passive:true });
+addEventListener('touchend', ()=>{ pinch = 0; });
+
+function applyViewOffset(){
+  // On wide screens the panel occupies the left ~390px, so shift the
+  // frustum to seat the car in the clear space to its right.
+  if(innerWidth > 820){
+    const shift = -150;
+    camera.setViewOffset(innerWidth, innerHeight, shift, 0, innerWidth, innerHeight);
+  } else {
+    camera.clearViewOffset();
+  }
+  camera.updateProjectionMatrix();
+}
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  applyViewOffset();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ════════════════ NALEDI BEHAVIOUR ════════════════ */
+let pointAt = null, speakingNow = false;
+let headYaw = 0, headPitch = 0;
+
+/* Ground speed in metres/second. Tuned against the walk clip's stride so
+   her feet plant rather than skate — raise if she looks like she's
+   moonwalking, lower if she's sliding forwards. */
+const WALK_SPEED = 1.35;
+let orbitRadius = 3.0;          // her lane around the car
+let targetAngle = null;         // where on the lane she's heading
+let currentAngle = Math.atan2(2.6, 3.4);
+
+/* The car's footprint as an ellipse, plus clearance. She may never enter it. */
+function hull(){
+  return { a: carWid*0.5 + 0.62, b: carLen*0.5 + 0.62 };
+}
+function insideHull(x, z, pad=0){
+  const h = hull();
+  return (x*x)/((h.a+pad)*(h.a+pad)) + (z*z)/((h.b+pad)*(h.b+pad)) < 1;
+}
+/* Lane radius that clears the car at a given heading */
+function laneRadius(angle){
+  const h = hull();
+  const s = Math.sin(angle), c = Math.cos(angle);
+  // radius of the ellipse along this direction, then a margin
+  const r = 1 / Math.sqrt((s*s)/(h.a*h.a) + (c*c)/(h.b*h.b));
+  return r + 0.55;
+}
+
+/* Named stations let related stops share a position, so she doesn't shuffle
+   a few degrees between, say, the charge port and the V2L socket. */
+const STATIONS = { rear: -2.55, front: 0.55, side: 1.45 };
+let currentStation = null;
+
+function stationFor(stop){
+  if(stop.station && STATIONS[stop.station] !== undefined){
+    currentStation = stop.station;
+    return STATIONS[stop.station];
+  }
+  currentStation = null;
+  const p = spotPos(stop.spot);
+  let ang = p ? Math.atan2(p.x, p.z) : (stop.cam.az + 40) * Math.PI/180;
+  const camAng = stop.cam.az * Math.PI/180;
+  let off = ang - camAng;
+  while(off >  Math.PI) off -= Math.PI*2;
+  while(off < -Math.PI) off += Math.PI*2;
+  if(Math.abs(off) < 0.5) ang += (off >= 0 ? 0.62 : -0.62);   // step out of the shot
+  return ang;
+}
+
+function updateNaledi(dt){
+  let moving = false;
+  let moveDir = 0;
+
+  if(targetAngle !== null){
+    let diff = targetAngle - currentAngle;
+    while(diff >  Math.PI) diff -= Math.PI*2;   // always take the short way round
+    while(diff < -Math.PI) diff += Math.PI*2;
+
+    if(Math.abs(diff) > 0.02){
+      moving = true;
+      moveDir = Math.sign(diff);               // wrapped direction, not raw
+      const angularSpeed = WALK_SPEED / Math.max(1.2, orbitRadius);
+      currentAngle += moveDir * Math.min(angularSpeed*dt, Math.abs(diff));
+    } else {
+      currentAngle = targetAngle;
+      targetAngle = null;
+    }
+  }
+
+  // ease the lane radius toward what clears the car at this heading
+  const wantR = laneRadius(currentAngle);
+  orbitRadius += (wantR - orbitRadius) * Math.min(1, 3*dt);
+
+  const gx = Math.sin(currentAngle) * orbitRadius;
+  const gz = Math.cos(currentAngle) * orbitRadius;
+  naledi.position.x += (gx - naledi.position.x) * Math.min(1, 9*dt);
+  naledi.position.z += (gz - naledi.position.z) * Math.min(1, 9*dt);
+
+  // hard guarantee: if anything ever puts her inside the car, push her out
+  if(insideHull(naledi.position.x, naledi.position.z)){
+    const ang = Math.atan2(naledi.position.x, naledi.position.z);
+    const r = laneRadius(ang);
+    naledi.position.x = Math.sin(ang) * r;
+    naledi.position.z = Math.cos(ang) * r;
+  }
+
+  // Body facing: along the path while walking, toward the subject at rest.
+  if(moving){
+    turnTo(currentAngle + moveDir*Math.PI/2, 6*dt);
+  } else if(pointAt){
+    turnTo(Math.atan2(pointAt.x-naledi.position.x, pointAt.z-naledi.position.z), 3.4*dt);
+  } else {
+    turnTo(Math.atan2(camera.position.x-naledi.position.x,
+                      camera.position.z-naledi.position.z), 2.2*dt);
+  }
+
+  chooseClip(moving);
+
+  if(NALEDI.mixer) NALEDI.mixer.update(dt);
+
+  // Head look-at, applied after the mixer so it layers over the clip
+  // rather than being overwritten by it.
+  if(NALEDI.head){
+    const target = pointAt ? pointAt : camera.position;
+    const local = naledi.worldToLocal(target.clone());
+    const wantY = THREE.MathUtils.clamp(Math.atan2(local.x, local.z), -0.6, 0.6);
+    const wantX = THREE.MathUtils.clamp(
+      -Math.atan2(local.y - NALEDI.height*0.9, Math.hypot(local.x, local.z)), -0.3, 0.3);
+    headYaw   += (wantY - headYaw)   * Math.min(1, 3.2*dt);
+    headPitch += (wantX - headPitch) * Math.min(1, 3.2*dt);
+    // Mixamo heads are Y-up, Z-forward in bone space.
+    NALEDI.head.rotation.y += headYaw * 0.55;
+    NALEDI.head.rotation.x += headPitch * 0.55;
+  }
+}
+
+function turnTo(want, k){
+  let d = want - naledi.rotation.y;
+  while(d > Math.PI) d -= Math.PI*2;
+  while(d < -Math.PI) d += Math.PI*2;
+  naledi.rotation.y += d * Math.min(1, k);
+}
+
+/* ════════════════ SESSION TRACKING ════════════════ */
+const session = {
+  car:null, stopsVisited:[], questions:[], lastStop:null,
+  plainMode:false, started:Date.now(), leadCaptured:false
+};
+function trackStop(id){
+  if(!session.stopsVisited.includes(id)) session.stopsVisited.push(id);
+  session.lastStop = id;
+}
+function saveSession(){
+  const payload = { ...session, seconds: Math.round((Date.now()-session.started)/1000) };
+  const blob = new Blob([JSON.stringify(payload)], { type:'application/json' });
+  navigator.sendBeacon ? navigator.sendBeacon('/api/session', blob)
+                       : fetch('/api/session',{method:'POST',body:JSON.stringify(payload),keepalive:true});
+}
+addEventListener('pagehide', saveSession);
+
+/* ════════════════ DIALOGUE ════════════════ */
+let plain = false, muted = false, currentStop = null;
+
+function renderChips(list){
+  const box = el('chips');
+  box.innerHTML = '';
+  (list||[]).forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'chip' + (c.primary ? ' primary' : (c.alt ? ' alt' : ''));
+    b.textContent = c.t;
+    b.addEventListener('click', ()=>{
+      if(c.act === 'lead') return openLead();
+      if(c.act === 'switch') return el('switchbtn').click();
+      session.questions.push(c.t);
+      if(c.go) return askAbout(c.t, c.go);
+      if(c.ask) return ask(c.ask);
+      ask(c.t);
+    });
+    box.appendChild(b);
+  });
+}
+
+function show(text, chips, stopLabel){
+  el('speech').classList.add('on');
+  el('line').textContent = text;
+  el('stoplbl').textContent = stopLabel || '';
+  renderChips(chips);
+}
+function thinking(){
+  el('speech').classList.add('on');
+  el('line').innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+  el('chips').innerHTML = '';
+}
+let toastT;
+function toast(t, ms=4500){
+  el('toast').textContent = t; el('toast').classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(()=>el('toast').classList.remove('on'), ms);
+}
+
+function buildRail(){
+  const r = el('rail'); r.innerHTML = '';
+  STOPS.forEach(s=>{
+    const b = document.createElement('button');
+    b.innerHTML = '<span class="pip"></span><span class="lbl">'+s.rail+'</span>';
+    b.dataset.id = s.id;
+    b.addEventListener('click', ()=>goStop(s.id));
+    r.appendChild(b);
+  });
+}
+function paintRail(){
+  [...el('rail').children].forEach(b=>{
+    b.classList.toggle('here', b.dataset.id === currentStop?.id);
+    b.classList.toggle('done', session.stopsVisited.includes(b.dataset.id));
+  });
+}
+
+const markerEl = document.createElement('div');
+markerEl.className = 'spot';
+markerEl.innerHTML = '<div class="ring"></div><div class="tag"></div>';
+markerEl.style.opacity = '0';
+document.body.appendChild(markerEl);
+
+/* Move the camera, marker and Naledi to a stop. No speech. */
+function moveToStop(id){
+  const stop = STOPS.find(s=>s.id === id);
+  if(!stop) return null;
+  currentStop = stop;
+  trackStop(id);
+  paintRail();
+  setShot(stop);
+  const p = spotPos(stop.spot);
+  pointAt = p ? p.clone() : null;
+  targetAngle = stationFor(stop);
+  markerEl.querySelector('.tag').textContent = stop.spot?.tag || '';
+  el('stoplbl').textContent = stop.rail;
+  if(stop.theatre === 'shed') setTimeout(runLoadshedding, 2600);
+  return stop;
+}
+
+/* Go somewhere AND deliver the authored narration for it. */
+function goStop(id){
+  const stop = moveToStop(id);
+  if(!stop) return;
+  const text = (plain ? stop.plain : stop.pro)(FLEET[activeKey]);
+  show(text, stop.chips, stop.rail);
+  speak(text);
+  if(stop.isClose && !session.leadCaptured)
+    setTimeout(()=>{ if(currentStop?.isClose) openLead(); }, 14000);
+}
+
+/* A choice that implies a destination: move there, then let Naledi answer
+   it in her own words. Falls back to the authored line if the AI is down. */
+async function askAbout(question, stopId){
+  const stop = moveToStop(stopId);
+  if(!hasKey){
+    // No AI available — the authored copy is the better answer anyway.
+    if(stop){
+      const text = (plain ? stop.plain : stop.pro)(FLEET[activeKey]);
+      show(text, stop.chips, stop.rail);
+      speak(text);
+    }
+    return;
+  }
+  await ask(question, stop);
+}
+
+/* ════════════════ LOADSHEDDING MOMENT ════════════════ */
+let shedRunning = false;
+function runLoadshedding(){
+  if(shedRunning) return;
+  shedRunning = true;
+  const before = spots.map(s=>s.intensity);
+  const hemiBefore = hemi.intensity, keyBefore = key.intensity;
+
+  let t = 0;
+  const dim = setInterval(()=>{
+    t += 0.05;
+    const k = Math.max(0, 1 - t*1.6);
+    spots.forEach((s,i)=>s.intensity = before[i]*k);
+    hemi.intensity = hemiBefore*k*0.5;
+    key.intensity = keyBefore*k;
+    rim.intensity = 34 + (1-k)*70;
+    if(k <= 0) clearInterval(dim);
+  }, 40);
+
+  el('shed').classList.add('on');
+  el('shedcap').classList.add('on');
+  ['a1','a2','a3','a4'].forEach((id,i)=>setTimeout(()=>el(id).classList.add('on'), 900 + i*550));
+
+  setTimeout(()=>{
+    let u = 0;
+    const up = setInterval(()=>{
+      u += 0.04;
+      const k = Math.min(1, u);
+      spots.forEach((s,i)=>s.intensity = before[i]*k);
+      hemi.intensity = hemiBefore*k; key.intensity = keyBefore*k;
+      rim.intensity = 34 + (1-k)*70;
+      if(k >= 1){ clearInterval(up); shedRunning = false; }
+    }, 40);
+    el('shed').classList.remove('on');
+    el('shedcap').classList.remove('on');
+    ['a1','a2','a3','a4'].forEach(id=>el(id).classList.remove('on'));
+  }, 7000);
+}
+
+/* ════════════════ VOICE OUT ════════════════ */
+let voice = null;
+function pickVoice(){
+  const all = speechSynthesis.getVoices();
+  if(!all.length) return;
+  voice = all.find(v=>v.lang==='en-ZA')
+       || all.find(v=>/en-GB/.test(v.lang) && /female|Libby|Sonia|Hazel/i.test(v.name))
+       || all.find(v=>/en-GB/.test(v.lang)) || all.find(v=>/^en/.test(v.lang)) || all[0];
+}
+pickVoice(); speechSynthesis.onvoiceschanged = pickVoice;
+
+function speak(text){
+  if(muted || !('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  if(voice) u.voice = voice;
+  u.rate = 1.03; u.pitch = 1.06;
+  u.onstart = ()=>speakingNow = true;
+  u.onend = u.onerror = ()=>speakingNow = false;
+  speechSynthesis.speak(u);
+}
+
+/* ════════════════ VOICE IN ════════════════ */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = el('mic'), micLabel = el('mic-label'), heard = el('heard');
+let recog=null, listening=false, micReady=false, micStream=null, analyser=null, levelData=null, sawAudio=false;
+
+function micUnavailable(reason){
+  micReady = false;
+  micBtn.classList.add('off'); micBtn.disabled = true;
+  micLabel.textContent = 'No mic';
+  el('mictip').innerHTML = reason + ' — type instead';
+  log('mic unavailable:', reason);
+}
+async function openMic(){
+  if(micStream) return true;
+  try{
+    micStream = await navigator.mediaDevices.getUserMedia({ audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true} });
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state === 'suspended') await ctx.resume();
+    analyser = ctx.createAnalyser(); analyser.fftSize = 512;
+    levelData = new Uint8Array(analyser.frequencyBinCount);
+    ctx.createMediaStreamSource(micStream).connect(analyser);
+    const tr = micStream.getAudioTracks()[0];
+    log('mic device:', tr.label || '(hidden)', 'muted:', tr.muted);
+    if(tr.muted) toast('Your microphone is muted at system level.', 6000);
+    return true;
+  }catch(err){
+    log('getUserMedia failed:', err.name);
+    if(err.name === 'NotAllowedError'){ micUnavailable('Mic permission denied'); toast('Microphone blocked. Allow it via the padlock in the address bar, then reload.', 7000); }
+    else if(err.name === 'NotFoundError'){ micUnavailable('No microphone found'); }
+    else micUnavailable('Mic could not open');
+    return false;
+  }
+}
+function micLevel(){
+  if(!analyser) return 0;
+  analyser.getByteTimeDomainData(levelData);
+  let pk = 0;
+  for(let i=0;i<levelData.length;i++) pk = Math.max(pk, Math.abs(levelData[i]-128));
+  return pk/128;
+}
+
+if(!SR) micUnavailable(/Firefox/.test(navigator.userAgent) ? 'Firefox has no speech recognition' : 'No speech recognition here');
+else if(!window.isSecureContext) micUnavailable('Mic needs localhost or HTTPS');
+else {
+  micReady = true;
+  el('mictip').innerHTML = 'Hold <b>V</b> to talk';
+  recog = new SR();
+  recog.lang='en-ZA'; recog.continuous=true; recog.interimResults=true; recog.maxAlternatives=1;
+  let buffer='', watchdog=null;
+  recog.onstart = ()=>{
+    listening=true; buffer=''; sawAudio=false;
+    micBtn.classList.add('live'); micLabel.textContent='Listening'; heard.textContent='';
+    watchdog = setTimeout(()=>{ if(!sawAudio) toast('No audio reaching the recogniser — check your input device, or type below.', 6000); }, 2000);
+  };
+  recog.onaudiostart = ()=>{ sawAudio = true; };
+  recog.onresult = e=>{
+    let interim=''; buffer='';
+    for(let i=0;i<e.results.length;i++){
+      const r = e.results[i];
+      if(r.isFinal) buffer += r[0].transcript; else interim += r[0].transcript;
+    }
+    const s = (buffer||interim).trim();
+    heard.textContent = s ? '“'+s+'”' : '';
+  };
+  recog.onerror = e=>{
+    clearTimeout(watchdog);
+    log('mic error:', e.error);
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){ micUnavailable('Mic permission blocked'); }
+    else if(e.error==='no-speech') toast('Did not catch that — try again or type below.');
+    else if(e.error==='network') toast('Speech recognition needs internet. Type below instead.', 6000);
+    else if(e.error==='audio-capture'){ micUnavailable('Mic could not be captured'); }
+    else if(e.error!=='aborted') toast('Speech error: '+e.error);
+  };
+  recog.onend = ()=>{
+    clearTimeout(watchdog);
+    listening=false; micBtn.classList.remove('live'); micLabel.textContent='Talk';
+    const said = buffer.trim();
+    if(said){ setTimeout(()=>heard.textContent='', 900); session.questions.push(said); ask(said); }
+  };
+}
+async function startListening(){
+  if(!micReady || listening) return;
+  if(!(await openMic())) return;
+  speechSynthesis.cancel();
+  try{ recog.start(); }
+  catch(err){
+    log('start() threw:', err.name);
+    if(err.name==='InvalidStateError'){ try{recog.abort();}catch(_){}
+      setTimeout(()=>{ try{recog.start();}catch(e2){log('retry failed',e2.name);} }, 260); }
+  }
+}
+function stopListening(){ if(listening){ try{recog.stop();}catch(_){}} }
+micBtn.addEventListener('click', ()=>listening ? stopListening() : startListening());
+addEventListener('keydown', e=>{
+  if(document.activeElement === el('msg')) return;
+  if(e.code === 'KeyV' && !e.repeat) startListening();
+  if(e.code === 'BracketLeft')  nudgeYaw(-90);
+  if(e.code === 'BracketRight') nudgeYaw(90);
+  if(e.code === 'Minus')  resizeNaledi(1/1.25);
+  if(e.code === 'Equal')  resizeNaledi(1.25);
+});
+addEventListener('keyup', e=>{ if(e.code === 'KeyV') stopListening(); });
+
+function nudgeYaw(deg){
+  if(!active) return;
+  active.userData.yawWrap.rotation.y += deg*Math.PI/180;
+  const d = Math.round(active.userData.yawWrap.rotation.y*180/Math.PI) % 360;
+  toast('modelYaw for ' + activeKey + ' is now ' + d + '° — copy this into FLEET if the hotspots line up.', 6000);
+}
+
+/* Live character resize. If she loads at the wrong size, press - and =
+   until she looks right, then copy the printed number into TARGET_HEIGHT. */
+function resizeNaledi(mult){
+  if(!NALEDI.root) return;
+  NALEDI.root.scale.multiplyScalar(mult);
+  NALEDI.root.updateWorldMatrix(true, true);
+  const b = new THREE.Box3().setFromObject(NALEDI.root);
+  NALEDI.root.position.y -= b.min.y - DAIS_TOP;   // keep feet on the podium
+  const h = b.getSize(new THREE.Vector3()).y;
+  NALEDI.height = h;
+  toast('Naledi is now ' + h.toFixed(2) + ' m tall. Set TARGET_HEIGHT to '
+        + h.toFixed(2) + ' once she looks right.', 3000);
+  log('height', h.toFixed(3), '| scale', NALEDI.root.scale.x.toFixed(5));
+}
+
+/* ════════════════ TEXT IN ════════════════ */
+el('msg').addEventListener('keydown', e=>{
+  e.stopPropagation();
+  if(e.key === 'Enter') submit();
+});
+el('send').addEventListener('click', submit);
+function submit(){
+  const v = el('msg').value.trim();
+  if(!v) return;
+  el('msg').value = '';
+  session.questions.push(v);
+  ask(v);
+}
+
+/* ════════════════ THE AI ════════════════ */
+let hasKey = false;
+function setAIBadge(live, why){
+  const b = el('aibadge');
+  if(!b) return;
+  b.className = 'tool aistat ' + (live ? 'live' : 'dead');
+  b.textContent = live ? 'AI live' : 'Scripted';
+  b.title = live ? 'Naledi is answering through the API'
+                 : (why || 'Naledi is on scripted answers') + ' — click to retry';
+}
+async function checkKey(announce){
+  try{
+    const d = await (await fetch('/api/status')).json();
+    hasKey = !!d.hasKey;
+    setAIBadge(hasKey, hasKey ? null : 'No ANTHROPIC_API_KEY set on the server');
+  }catch(_){
+    hasKey = false;
+    setAIBadge(false, 'Cannot reach the server');
+  }
+  if(announce) await runDiagnostic();
+}
+
+async function runDiagnostic(){
+  toast('Testing the connection…', 2500);
+  try{
+    const d = await (await fetch('/api/diag')).json();
+    log('diagnostic:', d);
+    if(d.result === 'ok'){
+      hasKey = true;
+      setAIBadge(true);
+      toast('Connected. Key ' + d.keyPreview + ' works with ' + d.model + '.', 6000);
+    } else {
+      hasKey = false;
+      setAIBadge(false, d.advice);
+      toast(d.advice, 11000);
+    }
+  }catch(_){
+    setAIBadge(false, 'Server unreachable');
+    toast('Cannot reach the server. Is python3 server.py still running in your terminal?', 8000);
+  }
+}
+checkKey(false);
+
+function systemPrompt(atStop){
+  const c = FLEET[activeKey];
+  const here = atStop || currentStop;
+  const facts = here?.spot?.tag ? `You are standing at the ${here.spot.tag} and pointing at it.` : '';
+  return `You are Naledi, a sales consultant at a BYD dealership in South Africa. You are standing at a ${c.name} (${c.trim}, ${c.price}) giving a walkaround to a customer.
+
+Vehicle: ${Object.entries(c.specs).map(([k,v])=>k+': '+v).join('; ')}. ${c.topTrim}
+${SHARED_FACTS}
+
+You are currently at the "${here?.rail || 'start'}" part of the walkaround. ${facts}
+
+Style:
+- Spoken out loud, so two to four sentences. No lists, no markdown.
+- ${plain ? 'PLAIN ENGLISH MODE: the customer does not know car jargon. Explain everything in everyday terms, use comparisons to things people know, never use an abbreviation without unpacking it.' : 'The customer is comfortable with car terms.'}
+- South African context: rands, loadshedding, Eskom tariffs, kilometres, real routes like Joburg to Durban.
+- Occasional local warmth is fine but do not lay it on thick.
+- Answer the actual question asked. Do not recite a script.
+- NEVER invent specs, features, colours, finance figures or dealer locations you were not given. Say you will confirm with the sales manager instead.
+- Be willing to concede where an EV is the wrong fit — it makes you credible. If someone does very long rural trips constantly, say the Sealion 6 plug-in hybrid may suit them better.
+- Do NOT offer test drives, bookings or appointments — this is an online walkaround and you cannot arrange those. If asked, say the dealer team handles that and you can send them a summary with the nearest dealer's details.
+
+Reply ONLY with JSON, no fences:
+{"speech":"what you say","goto":"stop id or null","chips":["short follow-up the customer might tap","another","another"]}
+
+Valid goto ids: ${STOPS.map(s=>s.id).join(', ')}. Use goto only when moving to a different part of the car genuinely helps. Chips must be short — under eight words, phrased as the customer would say them.`;
+}
+
+const history = [];
+let busy = false, queued = null, failCount = 0;
+
+async function ask(text, atStop){
+  if(busy){
+    // Don't silently swallow it — hold the latest and run it when free.
+    queued = { text, atStop };
+    el('heard').textContent = 'Queued: “' + text + '”';
+    return;
+  }
+  busy = true;
+  speechSynthesis.cancel();
+  thinking();
+  history.push({ role:'user', content:text });
+  if(history.length > 16) history.splice(0, history.length-16);
+
+  let reply = null, problem = null;
+
+  if(hasKey){
+    try{
+      const res = await fetch('/api/chat', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ system: systemPrompt(atStop), messages: history })
+      });
+      if(res.ok){
+        reply = parse((await res.json()).text);
+        if(!reply) problem = 'Naledi replied in a format I could not read.';
+      } else {
+        const detail = await res.json().catch(()=>({}));
+        if(res.status === 503){ hasKey = false; problem = 'No API key is set on the server.'; }
+        else problem = detail.advice || detail.error || ('The API call failed (' + res.status + ').');
+      }
+    }catch(err){
+      problem = 'Could not reach the server — is it still running?';
+    }
+  } else {
+    problem = 'No API key is set on the server.';
+  }
+
+  if(!reply){
+    reply = fallback(text);
+    setAIBadge(false, problem);
+    if(problem){
+      log('AI unavailable:', problem);
+      // The fallback reads like a normal answer, so without this the
+      // failure is invisible and it looks like she's ignoring you.
+      toast('Naledi could not reach the AI: ' + problem
+            + ' She is on scripted answers — click the badge to retry.', 9000);
+      failCount++;
+      if(failCount === 3) runDiagnostic();
+    }
+  } else {
+    failCount = 0;
+    setAIBadge(true);
+  }
+
+  history.push({ role:'assistant', content: JSON.stringify(reply) });
+
+  const chips = (reply.chips||[]).slice(0,3).map(t=>({ t, ask:t }));
+  const atEnd = currentStop?.isClose;
+  if(atEnd || session.stopsVisited.length >= 4){
+    // Once they've seen enough, the summary is always one tap away —
+    // an AI reply must never strand them without it.
+    chips.push({ t: session.leadCaptured ? 'Show the summary again' : 'Show me the summary',
+                 act:'lead', primary:true });
+  }
+  if(!atEnd) chips.push({ t:'Carry on with the tour', alt:true, go: nextStopId() });
+  show(reply.speech, chips, currentStop?.rail);
+  speak(reply.speech);
+
+  if(reply.goto && reply.goto !== currentStop?.id) setTimeout(()=>moveToStop(reply.goto), 900);
+
+  busy = false;
+  if(queued){
+    const q = queued; queued = null;
+    el('heard').textContent = '';
+    setTimeout(()=>ask(q.text, q.atStop), 120);
+  }
+}
+
+function nextStopId(){
+  const i = STOPS.findIndex(s=>s.id === currentStop?.id);
+  return STOPS[Math.min(STOPS.length-1, i+1)].id;
+}
+
+function parse(raw){
+  if(!raw) return null;
+  let s = raw.trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if(a !== -1 && b > a) s = s.slice(a,b+1);
+  try{
+    const o = JSON.parse(s);
+    if(typeof o.speech === 'string' && o.speech.trim())
+      return { speech:o.speech.trim(), goto:o.goto ?? null, chips:Array.isArray(o.chips)?o.chips:[] };
+  }catch(_){}
+  return raw.length < 400 ? { speech: raw.trim(), goto:null, chips:[] } : null;
+}
+
+function fallback(text){
+  const t = text.toLowerCase();
+  const c = FLEET[activeKey];
+  if(/cost|charge.*home|electricity|per month|cheaper|petrol/.test(t))
+    return { speech:`At about R2.72 a kilowatt-hour, a full charge is roughly R225 for around 500 kilometres. The same distance in a petrol car is closer to R900. Most people save between one and two thousand rand a month.`, goto:null, chips:['What about servicing?','Show me the battery'] };
+  if(/loadshed|v2l|power|inverter|eskom/.test(t))
+    return { speech:`This is where it gets interesting for us. The car's battery is about sixty times a typical home inverter battery, and V2L lets you plug your house into it. Let me show you.`, goto:'v2l', chips:['How long does it last?','Does it hurt the battery?'] };
+  if(/range|far|durban|trip|anxiety/.test(t))
+    return { speech:`${c.specs.Range} on the official cycle, and realistically expect a bit under that with aircon and highway speeds. Joburg to Durban is one stop of about twenty-five minutes.`, goto:null, chips:['Where are the chargers?','Show me the battery'] };
+  if(/battery|blade|safe|degrade|warranty/.test(t))
+    return { speech:`It's the Blade Battery — lithium iron phosphate, built into the floor structure, eight year warranty. Come round this side and I'll show you where it sits.`, goto:'battery', chips:['How long does it last?','What about resale?'] };
+  if(/chinese|reliable|trust|quality|resale|parts|dealer/.test(t))
+    return { speech:`Fair question, and I get it daily. BYD made batteries for a decade before they made cars, and they now build more EVs than anyone in the world. Five year warranty, eight on the battery, servicing included.`, goto:'trust', chips:['Where are the dealers?','What about resale value?'] };
+  if(/test drive|book|buy|price|finance|deposit|appointment/.test(t))
+    return { speech:`The ${c.name} in this trim is ${c.price}, and that includes the maintenance plan and the home wallbox. Booking is handled by the dealer team, but I can send you a summary with the full specification and your closest dealer's details.`, goto:null, chips:[] };
+  return { speech:`Good question — let me get the exact answer from our sales manager rather than guess. In the meantime, shall we carry on round the car?`, goto:null, chips:['Carry on'] };
+}
+
+/* ════════════════ LEAD CAPTURE ════════════════ */
+function openLead(){
+  const c = FLEET[activeKey];
+  const covered = session.stopsVisited
+    .map(id=>STOPS.find(s=>s.id===id)?.rail).filter(Boolean);
+
+  el('leadsum').innerHTML =
+    `<div class="car"><b>${c.name}</b><span>${c.price}</span></div>
+     <dl>${Object.entries(c.specs).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` +
+    (covered.length
+      ? `<div class="covered">We went through <b>${covered.join('</b>, <b>')}</b>.` +
+        (session.questions.length
+          ? ` You asked ${session.questions.length} question${session.questions.length>1?'s':''} along the way.` : '') +
+        `</div>`
+      : '');
+
+  const link = el('brochure');
+  link.href = c.brochure;
+  link.setAttribute('download', c.name.replace(/ /g,'-') + '-Specifications-SA.pdf');
+  el('brochurename').textContent = c.name + ' specification';
+  el('brochuremeta').textContent = 'Official BYD South Africa PDF · full trim comparison';
+  link.addEventListener('click', ()=>{
+    session.brochureDownloaded = true;
+    log('brochure downloaded:', c.brochure);
+  }, { once:true });
+
+  el('lead').classList.add('on');
+  el('leadhead').textContent = session.leadCaptured
+    ? 'Your walkaround summary' : 'Your walkaround summary';
+}
+el('leadno').addEventListener('click', ()=>el('lead').classList.remove('on'));
+el('leadgo').addEventListener('click', async ()=>{
+  const payload = {
+    name: el('lname').value.trim(),
+    email: el('lmail').value.trim(),
+    phone: el('lphone').value.trim(),
+    dealer: el('lcity').value,
+    intent: el('lwhen').value,
+    car: FLEET[activeKey].name,
+    price: FLEET[activeKey].price,
+    stopsVisited: session.stopsVisited,
+    questions: session.questions,
+    plainMode: session.plainMode,
+    brochureDownloaded: !!session.brochureDownloaded
+  };
+  if(!payload.email || !/.+@.+\..+/.test(payload.email)){
+    toast('An email address would help — or tap Not now.');
+    el('lmail').focus();
+    return;
+  }
+  try{
+    const res = await fetch('/api/lead', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const out = await res.json().catch(()=>({}));
+    session.leadCaptured = true;
+    el('lead').classList.remove('on');
+    const who = payload.name ? payload.name.split(' ')[0] : 'there';
+    const line = out.emailed
+      ? `Thanks ${who} — the summary is on its way to ${payload.email}, with the specification sheet attached. The team at ${payload.dealer} will follow up when you're ready.`
+      : `Thanks ${who} — I've saved that. The team at ${payload.dealer} will follow up when you're ready.`;
+    show(line, [
+      { t:'Show me the other model', act:'switch' },
+      { t:'Download the specification', act:'lead' },
+      { t:'Start again', go:'stance' }
+    ], 'Done');
+    speak(line);
+    if(out.emailNote) log(out.emailNote);
+    saveSession();
+  }catch(_){ toast('Could not save that — is the server still running?'); }
+});
+
+/* ════════════════ TOOLS ════════════════ */
+el('aibadge').addEventListener('click', ()=>checkKey(true));
+
+let panelHidden = false;
+el('collapse').addEventListener('click', ()=>{
+  panelHidden = !panelHidden;
+  el('panel').classList.toggle('hidden', panelHidden);
+  el('collapse').textContent = panelHidden ? 'Show' : 'Hide';
+});
+
+el('plainbtn').addEventListener('click', ()=>{
+  plain = !plain;
+  session.plainMode = session.plainMode || plain;
+  el('plainbtn').classList.toggle('active', plain);
+  el('plainbtn').textContent = plain ? 'Plain English ✓' : 'Plain English';
+  if(currentStop){
+    const text = (plain ? currentStop.plain : currentStop.pro)(FLEET[activeKey]);
+    show(text, currentStop.chips, currentStop.rail);
+    speak(text);
+  }
+  toast(plain ? 'Naledi will skip the jargon from here.' : 'Back to normal car talk.');
+});
+el('mutebtn').addEventListener('click', ()=>{
+  muted = !muted;
+  if(muted) speechSynthesis.cancel();
+  el('mutebtn').textContent = muted ? 'Voice off' : 'Voice on';
+  el('mutebtn').classList.toggle('active', !muted);
+});
+el('mutebtn').classList.add('active');
+el('switchbtn').addEventListener('click', ()=>{
+  const other = activeKey === 'seal' ? 'sealion7' : 'seal';
+  if(!loaded[other]) return toast('That model did not load.');
+  showCar(other);
+  session.car = FLEET[other].name;
+  history.length = 0;
+  goStop('stance');
+});
+
+/* ════════════════ LOOP ════════════════ */
+const clock = new THREE.Clock();
+let quiet = 0;
+const camTarget = new THREE.Vector3();
+
+function frame(){
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), .05);
+  const t = clock.elapsedTime;
+
+  // slow drift back to the framed shot after the visitor lets go
+  if(userMoved && !dragging){
+    idleSpin += dt;
+    if(idleSpin > 6 && currentStop){ setShot(currentStop); idleSpin = 0; }
+  }
+
+  const k = 1 - Math.pow(0.0009, dt);
+  cam.az += (want.az - cam.az)*k;
+  cam.el += (want.el - cam.el)*k;
+  cam.dist += (want.dist - cam.dist)*k;
+  cam.tx += (want.tx - cam.tx)*k;
+  cam.ty += (want.ty - cam.ty)*k;
+  cam.tz += (want.tz - cam.tz)*k;
+
+  const a = cam.az*Math.PI/180, e = cam.el*Math.PI/180;
+  camera.position.set(
+    cam.tx + Math.sin(a)*Math.cos(e)*cam.dist,
+    cam.ty + Math.sin(e)*cam.dist + 0.9,
+    cam.tz + Math.cos(a)*Math.cos(e)*cam.dist
+  );
+  camTarget.set(cam.tx, cam.ty, cam.tz);
+  camera.lookAt(camTarget);
+
+  updateNaledi(dt);
+
+  // project the hotspot marker to screen
+  const sp = currentStop ? spotPos(currentStop.spot) : null;
+  if(sp && active){
+    const v = sp.clone().project(camera);
+    const behind = v.z > 1;
+    markerEl.style.opacity = behind ? '0' : '1';
+    markerEl.style.left = ((v.x*0.5+0.5)*innerWidth) + 'px';
+    markerEl.style.top  = ((-v.y*0.5+0.5)*innerHeight) + 'px';
+  } else markerEl.style.opacity = '0';
+
+  // mic meter
+  const m = el('meter');
+  m.classList.toggle('on', listening);
+  if(listening){
+    const lv = micLevel();
+    quiet = lv < 0.012 ? quiet+1 : 0;
+    m.classList.toggle('quiet', quiet > 90);
+    m.firstElementChild.style.width = Math.min(100, lv*260).toFixed(1)+'%';
+  } else quiet = 0;
+
+  daisRing.material.opacity = .32 + Math.sin(t*1.4)*.14;
+  tideMat.opacity = .4 + Math.sin(t*0.7)*.12;
+
+  renderer.render(scene, camera);
+}
+
+/* ════════════════ START ════════════════ */
+(async function start(){
+  const keys = Object.keys(FLEET);
+  const prog = keys.map(()=>0);
+  const paint = ()=>{ el('bar').firstElementChild.style.width =
+    (prog.reduce((a,b)=>a+b,0)/keys.length*100).toFixed(0)+'%'; };
+
+  el('bootnote').textContent = 'Loading vehicles and presenter…';
+  const [ok] = await Promise.all([
+    Promise.all(keys.map((k,i)=>loadCar(k, p=>{ prog[i]=p; paint(); })
+      .then(r=>{ prog[i]=1; paint(); return r; }))),
+    loadNaledi()
+  ]);
+
+  if(!ok.some(Boolean)){
+    el('bootnote').style.display='none';
+    el('booterr').style.display='block';
+    el('booterr').innerHTML = 'The models did not load. Check that <b>2024_byd_seal.glb</b> and <b>2024_byd_sealion_7.glb</b> are in the <b>models</b> folder next to server.py, then reload.';
+    return;
+  }
+
+  buildRail();
+  applyViewOffset();
+  frame();
+  el('boot').style.display = 'none';
+
+  const list = el('carlist');
+  keys.forEach((k,i)=>{
+    if(!ok[i]) return;
+    const c = FLEET[k];
+    const b = document.createElement('button');
+    b.className = 'carbtn';
+    b.innerHTML = `<div class="n">${c.name}</div><div class="b">${c.blurb}</div><div class="p">${c.price}</div>`;
+    b.addEventListener('click', ()=>{
+      el('pick').classList.remove('on');
+      el('stage').classList.add('on');
+      showCar(k);
+      session.car = c.name;
+      if(micReady) openMic();
+      el('hint').classList.add('on');
+      setTimeout(()=>el('hint').classList.remove('on'), 5000);
+      waveHello(2800);
+      setTimeout(()=>goStop('stance'), 1400);
+    });
+    list.appendChild(b);
+  });
+  el('pick').classList.add('on');
+})();
+</script>
+</body>
+</html>
