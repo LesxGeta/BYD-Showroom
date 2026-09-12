@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Email test — BYD Showroom</title>
+<style>
+:root{--blue:#40A2E3;--baltic:#252728;--void:#0E1012;--ink:rgba(255,255,255,.58)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--void);color:#fff;font:15px/1.7 'Inter',system-ui,sans-serif;
+padding:44px 22px;max-width:600px;margin:0 auto}
+h1{font-size:1.35rem;font-weight:600;letter-spacing:-.01em}
+.lead{color:var(--ink);margin:6px 0 28px;font-size:.9rem}
+.row{display:flex;gap:14px;align-items:flex-start;padding:15px 0;border-top:1px solid rgba(255,255,255,.1)}
+.dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.2);margin-top:8px;flex:none}
+.dot.ok{background:var(--blue)}.dot.bad{background:#D70C19}
+.row b{display:block;font-weight:500;margin-bottom:2px;font-size:.9rem}
+.row span{color:var(--ink);font-size:.83rem}
+label{display:block;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;
+color:var(--ink);margin:26px 0 7px;font-weight:600}
+input,select{width:100%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.12);
+border-radius:3px;padding:12px;color:#fff;font:inherit;font-size:.9rem}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px}
+button{background:var(--blue);color:#08243a;border:none;padding:14px 30px;
+font:600 .75rem 'Inter',system-ui;letter-spacing:.1em;text-transform:uppercase;
+border-radius:3px;cursor:pointer;margin-top:24px}
+button:disabled{opacity:.45;cursor:not-allowed}
+#out{margin-top:24px;padding:15px 17px;border-radius:4px;font-size:.86rem;
+line-height:1.65;display:none;white-space:pre-wrap}
+#out.ok{display:block;background:rgba(64,162,227,.12);border-left:3px solid var(--blue)}
+#out.bad{display:block;background:rgba(215,12,25,.1);border-left:3px solid #D70C19}
+.note{margin-top:30px;font-size:.78rem;color:rgba(255,255,255,.35);line-height:1.7}
+a{color:var(--blue)}
+</style>
+</head>
+<body>
+
+<h1>Email test</h1>
+<p class="lead">Sends a real summary email. Does not use the AI, the tour, or any
+Gemini quota — this is purely SMTP.</p>
+
+<div class="row"><i class="dot" id="d1"></i><div><b>Server</b><span id="s1">checking…</span></div></div>
+<div class="row"><i class="dot" id="d2"></i><div><b>SMTP settings</b><span id="s2">checking…</span></div></div>
+
+<label for="to">Send to</label>
+<input id="to" type="email" placeholder="you@example.com">
+
+<label for="car">Which vehicle</label>
+<select id="car">
+  <option>BYD Seal</option>
+  <option>BYD Sealion 7</option>
+</select>
+
+<button id="go">Send test email</button>
+
+<div id="out"></div>
+
+<p class="note">The email includes the spec table, a sample summary and the
+matching brochure as a PDF attachment — exactly what a real lead receives.
+If it succeeds but nothing arrives, check spam: a first automated message
+from a personal Gmail account often lands there.</p>
+
+<script>
+const $ = id => document.getElementById(id);
+const mark = (n, state, text) => { $('d'+n).className = 'dot '+state; $('s'+n).textContent = text; };
+
+fetch('/api/status').then(r=>r.json()).then(d=>{
+  mark(1,'ok','Reachable');
+  if(d.smtpConfigured){
+    mark(2,'ok','Configured as ' + d.smtpUser);
+  } else {
+    mark(2,'bad', d.smtpNote || 'Not configured — set SMTP_USER and SMTP_PASS in server.py');
+    $('go').disabled = true;
+  }
+}).catch(()=>{
+  mark(1,'bad','Cannot reach the server. Is python server.py running?');
+  mark(2,'bad','unknown');
+  $('go').disabled = true;
+});
+
+$('go').addEventListener('click', async ()=>{
+  const to = $('to').value.trim();
+  if(!to || !/.+@.+\..+/.test(to)){
+    $('out').className = 'bad';
+    $('out').textContent = 'Enter a valid email address first.';
+    return;
+  }
+  $('go').disabled = true;
+  $('go').textContent = 'Sending…';
+  $('out').className = '';
+  try{
+    const res = await fetch('/api/mailtest', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email: to, car: $('car').value })
+    });
+    const d = await res.json();
+    $('out').className = d.ok ? 'ok' : 'bad';
+    $('out').textContent = d.ok
+      ? 'Sent to ' + d.to + '.\n\nIf it has not arrived in a minute, check your spam folder.'
+      : 'Failed.\n\n' + (d.detail || 'No detail returned.');
+  }catch(err){
+    $('out').className = 'bad';
+    $('out').textContent = 'Request failed: ' + err.message;
+  }
+  $('go').disabled = false;
+  $('go').textContent = 'Send test email';
+});
+</script>
+</body>
+</html>

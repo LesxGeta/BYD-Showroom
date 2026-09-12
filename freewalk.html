@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BYD Showroom — Virtual Dealership</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --abyss:#050a12;
+  --hull:#0c1826;
+  --tide:#3fd8c8;
+  --tide-dim:rgba(63,216,200,.32);
+  --foam:#eef4f3;
+  --sand:#c9b68d;
+  --ink:rgba(238,244,243,.55);
+  --display:'Space Grotesk',system-ui,sans-serif;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--abyss);color:var(--foam);font-family:var(--body);overflow:hidden;-webkit-font-smoothing:antialiased}
+canvas{display:block}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,input:focus-visible{outline:2px solid var(--tide);outline-offset:2px}
+
+/* ── Tide line: the signature motif, a horizon rule that ripples ── */
+.tideline{height:1px;width:100%;background:linear-gradient(90deg,transparent,var(--tide-dim) 15%,var(--tide) 50%,var(--tide-dim) 85%,transparent);opacity:.7}
+
+/* ── Loading ── */
+#boot{position:fixed;inset:0;z-index:200;background:var(--abyss);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:32px;text-align:center}
+#boot .mark{font-family:var(--display);font-weight:300;font-size:clamp(2rem,7vw,3.6rem);letter-spacing:.34em;text-indent:.34em}
+#boot .sub{font-size:.72rem;letter-spacing:.32em;text-transform:uppercase;color:var(--ink)}
+#bar{width:min(420px,80vw);height:2px;background:rgba(255,255,255,.08);overflow:hidden}
+#bar i{display:block;height:100%;width:0%;background:var(--tide);transition:width .35s ease}
+#boot .note{font-size:.78rem;color:var(--ink);max-width:44ch;line-height:1.7}
+#boot .err{color:var(--sand);font-size:.8rem;max-width:52ch;line-height:1.7;display:none}
+
+/* ── Entry ── */
+#gate{position:fixed;inset:0;z-index:180;background:rgba(5,10,18,.92);backdrop-filter:blur(6px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:32px;text-align:center}
+#gate.on{display:flex}
+#gate h1{font-family:var(--display);font-weight:300;font-size:clamp(1.9rem,6vw,3.2rem);letter-spacing:.3em;text-indent:.3em}
+#gate .place{font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;color:var(--sand)}
+#enter{background:var(--tide);color:#04121a;padding:15px 46px;font-family:var(--display);font-weight:500;letter-spacing:.22em;text-transform:uppercase;font-size:.82rem;border-radius:2px;transition:transform .18s,box-shadow .18s}
+#enter:hover{transform:translateY(-2px);box-shadow:0 10px 34px rgba(63,216,200,.28)}
+.keys{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;font-size:.7rem;letter-spacing:.16em;color:var(--ink);text-transform:uppercase}
+.keys b{color:var(--foam);font-weight:500}
+
+/* ── HUD ── */
+#hud{position:fixed;inset:0;z-index:40;pointer-events:none;display:none}
+#hud.on{display:block}
+#brand{position:fixed;top:0;left:0;right:0;padding:18px 26px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:linear-gradient(to bottom,rgba(5,10,18,.75),transparent)}
+#brand .name{font-family:var(--display);font-weight:300;letter-spacing:.3em;font-size:1rem}
+#brand .name span{color:var(--tide)}
+#brand .loc{font-size:.6rem;letter-spacing:.24em;color:var(--ink);text-transform:uppercase;margin-top:5px}
+#reticle{position:fixed;top:50%;left:50%;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;border-radius:50%;background:rgba(238,244,243,.8);z-index:45;display:none}
+#reticle.on{display:block}
+
+/* Car card */
+#card{position:fixed;top:76px;right:26px;width:280px;background:rgba(8,17,28,.9);backdrop-filter:blur(14px);border:1px solid rgba(63,216,200,.22);border-radius:3px;overflow:hidden;opacity:0;transform:translateX(14px);transition:opacity .4s,transform .4s;pointer-events:none}
+#card.on{opacity:1;transform:none}
+#card .hd{padding:16px 18px 13px}
+#card .model{font-family:var(--display);font-size:1.22rem;font-weight:500;letter-spacing:.02em}
+#card .trim{font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:var(--tide);margin-top:5px}
+#card .price{font-family:var(--display);font-size:1rem;color:var(--sand);margin-top:11px;letter-spacing:.03em}
+#card .price small{display:block;font-family:var(--body);font-size:.58rem;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;margin-top:3px}
+#card dl{padding:14px 18px 17px;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:.76rem}
+#card dt{color:var(--ink);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;align-self:center}
+#card dd{text-align:right;font-family:var(--display);font-weight:400}
+
+/* Chat dock */
+#dock{position:fixed;bottom:0;left:0;right:0;padding:0 20px 20px;z-index:50;pointer-events:none}
+#dock .inner{max-width:720px;margin:0 auto;pointer-events:auto}
+#say{background:rgba(8,17,28,.93);backdrop-filter:blur(14px);border:1px solid rgba(63,216,200,.2);border-radius:3px;padding:15px 19px;margin-bottom:11px;font-size:.92rem;line-height:1.75;color:#dfece9;display:none}
+#say.on{display:block}
+#say .who{font-family:var(--display);font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--tide);margin-bottom:7px}
+#say .dots span{display:inline-block;width:5px;height:5px;margin-right:4px;border-radius:50%;background:var(--tide);animation:pulse 1.3s infinite}
+#say .dots span:nth-child(2){animation-delay:.18s}
+#say .dots span:nth-child(3){animation-delay:.36s}
+@keyframes pulse{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+#heard{font-size:.74rem;color:var(--ink);text-align:center;min-height:18px;margin-bottom:9px;letter-spacing:.04em;font-style:italic}
+#row{display:flex;gap:9px;align-items:center;background:rgba(8,17,28,.93);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.1);border-radius:3px;padding:7px 7px 7px 15px}
+#row:focus-within{border-color:var(--tide-dim)}
+#msg{flex:1;background:none;border:none;color:var(--foam);font-size:.9rem;padding:9px 0}
+#msg::placeholder{color:rgba(238,244,243,.32)}
+.act{padding:10px 15px;border-radius:2px;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;font-family:var(--display);font-weight:500;transition:background .18s,color .18s;white-space:nowrap}
+#send{background:rgba(63,216,200,.14);color:var(--tide)}
+#send:hover{background:rgba(63,216,200,.26)}
+#mic{background:rgba(255,255,255,.07);color:var(--foam);display:flex;align-items:center;gap:8px}
+#mic:hover{background:rgba(255,255,255,.13)}
+#mic .led{width:7px;height:7px;border-radius:50%;background:rgba(238,244,243,.4);transition:background .2s,box-shadow .2s}
+#mic.live{background:rgba(232,90,90,.16);color:#ff9d9d}
+#mic.live .led{background:#ff6b6b;box-shadow:0 0 0 0 rgba(255,107,107,.6);animation:live 1.3s infinite}
+#mic.off{opacity:.42;cursor:not-allowed}
+@keyframes live{to{box-shadow:0 0 0 9px rgba(255,107,107,0)}}
+#meter{height:2px;width:min(240px,60%);margin:10px auto 0;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;opacity:0;transition:opacity .25s}
+#meter.on{opacity:1}
+#meter i{display:block;height:100%;width:0%;background:var(--tide);transition:width .07s linear}
+#meter.quiet i{background:var(--sand)}
+#mictip{font-size:.66rem;color:var(--ink);text-align:center;margin-top:9px;letter-spacing:.12em;text-transform:uppercase}
+#mictip b{color:var(--sand);font-weight:500}
+
+/* Toasts */
+#toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%);z-index:60;background:rgba(12,24,38,.96);border:1px solid rgba(201,182,141,.3);color:var(--sand);padding:11px 18px;border-radius:2px;font-size:.76rem;letter-spacing:.06em;opacity:0;transition:opacity .3s;pointer-events:none;max-width:min(500px,88vw);text-align:center;line-height:1.6}
+#toast.on{opacity:1}
+
+/* Nudge to approach */
+#nudge{position:fixed;top:50%;left:50%;transform:translate(-50%,44px);font-size:.66rem;letter-spacing:.26em;text-transform:uppercase;color:rgba(238,244,243,.5);opacity:0;transition:opacity .4s;z-index:44}
+#nudge.on{opacity:1}
+
+#credit{position:fixed;bottom:6px;left:12px;font-size:.56rem;color:rgba(238,244,243,.22);letter-spacing:.08em;z-index:41;pointer-events:none}
+
+@media(max-width:640px){
+  #card{top:auto;bottom:190px;right:14px;left:14px;width:auto}
+  #dock{padding:0 12px 14px}
+  .act{padding:10px 12px}
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<div id="boot">
+  <div>
+    <div class="mark">BYD</div>
+    <div class="sub" style="margin-top:10px">Virtual Showroom</div>
+  </div>
+  <div class="tideline" style="width:min(420px,80vw)"></div>
+  <div id="bar"><i></i></div>
+  <div class="note" id="bootnote">Loading vehicles…</div>
+  <div class="err" id="booterr"></div>
+</div>
+
+<div id="gate">
+  <div>
+    <div class="place">Cape Town · Sandton · Umhlanga</div>
+    <h1 style="margin-top:14px">BYD</h1>
+  </div>
+  <div class="tideline" style="width:min(360px,70vw)"></div>
+  <p style="color:var(--ink);font-size:.88rem;max-width:40ch;line-height:1.8">Naledi is on the floor and ready to show you around. Walk over and just start talking.</p>
+  <button id="enter">Enter showroom</button>
+  <div class="keys">
+    <span><b>WASD</b> Move</span><span><b>Mouse</b> Look</span><span><b>Shift</b> Sprint</span>
+    <span><b>V</b> Hold to talk</span><span><b>Tab</b> Type</span><span><b>Esc</b> Release cursor</span>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="brand">
+    <div>
+      <div class="name">BYD<span> ·</span> SHOWROOM</div>
+      <div class="loc">Ocean Series · South Africa</div>
+    </div>
+  </div>
+  <div id="card">
+    <div class="hd">
+      <div class="model" id="c-model">—</div>
+      <div class="trim" id="c-trim">—</div>
+      <div class="price" id="c-price">—<small>Recommended retail</small></div>
+    </div>
+    <div class="tideline"></div>
+    <dl id="c-specs"></dl>
+  </div>
+</div>
+
+<div id="reticle"></div>
+<div id="nudge">Walk closer to Naledi</div>
+<div id="toast"></div>
+
+<div id="dock">
+  <div class="inner">
+    <div id="say"><div class="who">Naledi</div><div id="say-body"></div></div>
+    <div id="heard"></div>
+    <div id="row">
+      <input id="msg" placeholder="Ask about range, price, charging…" autocomplete="off">
+      <button id="mic" title="Hold V to talk"><span class="led"></span><span id="mic-label">Talk</span></button>
+      <button id="send" class="act">Send</button>
+    </div>
+    <div id="meter"><i></i></div>
+    <div id="mictip"></div>
+  </div>
+</div>
+
+<div id="credit">Models by Ddiaz Design (Sketchfab) · CC BY-NC-SA 4.0</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ═══════════════════ INVENTORY ═══════════════════
+   BYD South Africa, Ocean series. Prices are recommended retail. */
+const FLEET = [
+  {
+    key:'seal', file:'models/2024_byd_seal.glb',
+    model:'BYD Seal', trim:'Premium Extended Range · RWD',
+    price:'R1 007 900', pos:{x:-5.6,z:-3.2}, rot:0.42, scale:null,
+    specs:{ Battery:'82.5 kWh Blade', Range:'570 km (WLTP)', Power:'230 kW / 360 Nm',
+            '0–100':'5.9 s', Charging:'150 kW DC', Drive:'Rear-wheel drive' },
+    hook:"The Seal is our electric sports sedan — Blade Battery, cell-to-body construction, 570 kilometres on a charge. It drives like a proper performance car.",
+    also:"There's also the AWD Performance at R1 211 900 — dual motor, 390 kilowatts, nought to a hundred in 3.8 seconds."
+  },
+  {
+    key:'sealion7', file:'models/2024_byd_sealion_7.glb',
+    model:'BYD Sealion 7', trim:'Premium · RWD', 
+    price:'R1 109 900', pos:{x:5.6,z:-3.2}, rot:-0.42, scale:null,
+    specs:{ Battery:'82.56 kWh Blade', Range:'482 km (WLTP)', Power:'230 kW / 380 Nm',
+            '0–100':'6.7 s', Charging:'150 kW DC', Boot:'500 L + 58 L frunk' },
+    hook:"The Sealion 7 is the coupé-styled SUV — same Blade Battery, five seats, 500 litres of boot, and a 15.6-inch screen that rotates.",
+    also:"The Performance AWD is R1 299 900 — 390 kilowatts, 4.5 seconds, Nappa leather and a head-up display."
+  }
+];
+const SHARED = "Every BYD here ships with a five-year or 100 000 km maintenance plan, an eight-year battery warranty, a 7 kW wallbox and a portable charger. V2L is standard, so the car can run your appliances during loadshedding.";
+
+/* ═══════════════════ SCENE ═══════════════════ */
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050a12);
+scene.fog = new THREE.Fog(0x050a12, 26, 62);
+
+const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, 0.05, 160);
+const player = new THREE.Object3D();
+player.position.set(0, 1.62, 9.5);
+player.add(camera);
+scene.add(player);
+
+// Image-based lighting gives the car paint and chrome something to reflect.
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+scene.add(new THREE.HemisphereLight(0x8fb6c9, 0x0a1420, 0.55));
+const key = new THREE.DirectionalLight(0xdff0ff, 1.1);
+key.position.set(6, 14, 8);
+key.castShadow = true;
+key.shadow.mapSize.set(2048,2048);
+key.shadow.camera.near = 1; key.shadow.camera.far = 44;
+key.shadow.camera.left = -20; key.shadow.camera.right = 20;
+key.shadow.camera.top = 20; key.shadow.camera.bottom = -20;
+key.shadow.bias = -0.0006;
+scene.add(key);
+
+/* Floor — dark polished concrete with a wet sheen */
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(70,70),
+  new THREE.MeshStandardMaterial({ color:0x0a1119, metalness:0.62, roughness:0.22 })
+);
+floor.rotation.x = -Math.PI/2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+/* Walls */
+function wall(w,h,d,x,y,z,ry=0){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+    new THREE.MeshStandardMaterial({ color:0x0c1826, metalness:0.15, roughness:0.85 }));
+  m.position.set(x,y,z); m.rotation.y = ry; m.receiveShadow = true;
+  scene.add(m); return m;
+}
+wall(40,7,0.4, 0,3.5,-16);
+wall(0.4,7,32, -20,3.5,0);
+wall(0.4,7,32,  20,3.5,0);
+wall(40,0.4,32, 0,7,0);
+
+/* Tide-line light strips on the back wall — the showroom's one flourish */
+const tideMat = new THREE.MeshBasicMaterial({ color:0x3fd8c8 });
+for(let i=0;i<3;i++){
+  const s = new THREE.Mesh(new THREE.BoxGeometry(30,0.045,0.05), tideMat);
+  s.position.set(0, 3.4 + i*0.5, -15.75);
+  scene.add(s);
+}
+const glow = new THREE.PointLight(0x3fd8c8, 26, 30, 2);
+glow.position.set(0,4.2,-13.5);
+scene.add(glow);
+
+/* Ceiling light bars */
+for(const x of [-9,0,9]){
+  for(const z of [-9,-1,7]){
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(4,0.09,0.3),
+      new THREE.MeshBasicMaterial({ color:0xf2fbff }));
+    bar.position.set(x,6.6,z); scene.add(bar);
+    const p = new THREE.PointLight(0xdff2ff, 9, 15, 2);
+    p.position.set(x,6.3,z); scene.add(p);
+  }
+}
+
+/* Podiums + spotlights */
+const podiums = [];
+FLEET.forEach(car=>{
+  const pod = new THREE.Mesh(new THREE.CylinderGeometry(3.6,3.75,0.16,64),
+    new THREE.MeshStandardMaterial({ color:0x101d2c, metalness:0.5, roughness:0.35 }));
+  pod.position.set(car.pos.x, 0.08, car.pos.z);
+  pod.receiveShadow = true; scene.add(pod);
+
+  const ring = new THREE.Mesh(new THREE.RingGeometry(3.62,3.82,72),
+    new THREE.MeshBasicMaterial({ color:0x3fd8c8, transparent:true, opacity:0.5, side:THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI/2; ring.position.set(car.pos.x,0.17,car.pos.z);
+  scene.add(ring); podiums.push(ring);
+
+  const spot = new THREE.SpotLight(0xfff6e8, 90, 20, Math.PI/6, 0.5, 1.6);
+  spot.position.set(car.pos.x, 6.4, car.pos.z);
+  spot.target.position.set(car.pos.x, 0, car.pos.z);
+  spot.castShadow = true;
+  spot.shadow.mapSize.set(1024,1024);
+  spot.shadow.bias = -0.0008;
+  scene.add(spot, spot.target);
+});
+
+/* ═══════════════════ SALESPERSON: NALEDI ═══════════════════
+   Stylised, not photoreal: soft capsule forms, faceted shoulders,
+   a tide-green scarf as the one bright note. */
+const naledi = new THREE.Group();
+const headPivot = new THREE.Group();
+const legs = { l:null, r:null };
+const arms = { l:null, r:null };
+
+{
+  const skin  = new THREE.MeshStandardMaterial({ color:0x8d5a3b, roughness:0.72, metalness:0.02 });
+  const suit  = new THREE.MeshStandardMaterial({ color:0x16222f, roughness:0.66, metalness:0.08 });
+  const shirt = new THREE.MeshStandardMaterial({ color:0xf3f6f5, roughness:0.85 });
+  const scarf = new THREE.MeshStandardMaterial({ color:0x3fd8c8, roughness:0.5, metalness:0.12, emissive:0x0d3d38, emissiveIntensity:0.5 });
+  const hair  = new THREE.MeshStandardMaterial({ color:0x160f0c, roughness:0.95 });
+  const dark  = new THREE.MeshStandardMaterial({ color:0x080c11, roughness:0.5, metalness:0.2 });
+
+  const add = (mesh,p,parent=naledi)=>{ mesh.position.set(...p); mesh.castShadow=true; parent.add(mesh); return mesh; };
+
+  // torso: tapered, slightly faceted
+  const torso = add(new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.26,0.62,10), suit), [0,1.16,0]);
+  torso.scale.z = 0.72;
+  add(new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.14,0.3,10), shirt), [0,1.4,0.055]).scale.z = 0.6;
+  // scarf
+  const sc = add(new THREE.Mesh(new THREE.TorusGeometry(0.135,0.036,8,20), scarf), [0,1.44,0]);
+  sc.rotation.x = Math.PI/2; sc.scale.z = 0.75;
+  add(new THREE.Mesh(new THREE.BoxGeometry(0.07,0.26,0.03), scarf), [0.07,1.3,0.11]).rotation.z = 0.12;
+  // hips
+  add(new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.21,0.22,10), dark), [0,0.8,0]).scale.z = 0.74;
+
+  // head
+  headPivot.position.set(0,1.53,0);
+  naledi.add(headPivot);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.06,0.1,8), skin);
+  neck.position.y = -0.03; neck.castShadow = true; headPivot.add(neck);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.125,20,18), skin);
+  skull.position.y = 0.14; skull.scale.set(0.94,1.06,0.98); skull.castShadow = true; headPivot.add(skull);
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(0.138,16,14), hair);
+  crown.position.set(0,0.165,-0.012); crown.scale.set(0.98,0.9,1.0); headPivot.add(crown);
+  const bun = new THREE.Mesh(new THREE.SphereGeometry(0.062,12,12), hair);
+  bun.position.set(0,0.2,-0.115); headPivot.add(bun);
+  for(const s of [-1,1]){
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.019,10,10),
+      new THREE.MeshStandardMaterial({ color:0x0a0a0a, roughness:0.15, metalness:0.1 }));
+    eye.position.set(0.045*s, 0.152, 0.108); headPivot.add(eye);
+    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.006,6,6),
+      new THREE.MeshBasicMaterial({ color:0xffffff }));
+    spark.position.set(0.045*s+0.006, 0.158, 0.121); headPivot.add(spark);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.026,8,8), skin);
+    ear.position.set(0.118*s, 0.135, 0.0); ear.scale.set(0.5,1,0.7); headPivot.add(ear);
+  }
+  const mouth = new THREE.Mesh(new THREE.CapsuleGeometry(0.011,0.03,3,7), skin.clone());
+  mouth.material.color.setHex(0x6b3b2c);
+  mouth.rotation.z = Math.PI/2; mouth.position.set(0,0.088,0.114);
+  headPivot.add(mouth);
+  naledi.userData.mouth = mouth;
+
+  // arms
+  for(const s of [-1,1]){
+    const pivot = new THREE.Group();
+    pivot.position.set(0.245*s, 1.42, 0);
+    naledi.add(pivot);
+    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.055,0.24,4,10), suit);
+    upper.position.y = -0.17; upper.castShadow = true; pivot.add(upper);
+    const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.048,0.22,4,10), suit);
+    fore.position.y = -0.44; fore.castShadow = true; pivot.add(fore);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.052,10,10), skin);
+    hand.position.y = -0.6; hand.scale.set(0.85,1,0.6); pivot.add(hand);
+    pivot.rotation.z = 0.12*s;
+    if(s<0) arms.l = pivot; else arms.r = pivot;
+  }
+
+  // legs
+  for(const s of [-1,1]){
+    const pivot = new THREE.Group();
+    pivot.position.set(0.105*s, 0.76, 0);
+    naledi.add(pivot);
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.077,0.5,4,10), dark);
+    leg.position.y = -0.34; leg.castShadow = true; pivot.add(leg);
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.06,0.22),
+      new THREE.MeshStandardMaterial({ color:0x05070a, roughness:0.35, metalness:0.3 }));
+    shoe.position.set(0,-0.68,0.035); shoe.castShadow = true; pivot.add(shoe);
+    if(s<0) legs.l = pivot; else legs.r = pivot;
+  }
+
+  // name plate
+  const cv = document.createElement('canvas');
+  cv.width = 512; cv.height = 128;
+  const g = cv.getContext('2d');
+  g.fillStyle = 'rgba(8,17,28,0.86)';
+  g.roundRect(0,0,512,128,16); g.fill();
+  g.strokeStyle = 'rgba(63,216,200,0.5)'; g.lineWidth = 3;
+  g.roundRect(2,2,508,124,15); g.stroke();
+  g.fillStyle = '#eef4f3'; g.font = '500 46px "Space Grotesk", sans-serif';
+  g.textAlign = 'center'; g.fillText('NALEDI', 256, 58);
+  g.fillStyle = '#3fd8c8'; g.font = '300 22px "IBM Plex Sans", sans-serif';
+  g.letterSpacing = '4px';
+  g.fillText('SALES CONSULTANT', 256, 92);
+  const plate = new THREE.Sprite(new THREE.SpriteMaterial({
+    map:new THREE.CanvasTexture(cv), transparent:true, depthTest:false }));
+  plate.scale.set(1.0,0.25,1); plate.position.y = 2.06;
+  naledi.add(plate);
+
+  naledi.position.set(0, 0, 3.4);
+  scene.add(naledi);
+}
+
+/* ═══════════════════ LOAD CARS ═══════════════════ */
+const bootBar   = document.querySelector('#bar i');
+const bootNote  = document.getElementById('bootnote');
+const bootErr   = document.getElementById('booterr');
+const loader    = new GLTFLoader();
+const progress  = FLEET.map(()=>0);
+
+function paintProgress(){
+  const pct = progress.reduce((a,b)=>a+b,0) / FLEET.length * 100;
+  bootBar.style.width = pct.toFixed(0) + '%';
+}
+
+function loadCar(car, i){
+  return new Promise(resolve=>{
+    loader.load(car.file,
+      gltf=>{
+        const root = gltf.scene;
+        // Normalise: Sketchfab exports vary wildly in scale and origin.
+        const box = new THREE.Box3().setFromObject(root);
+        const size = box.getSize(new THREE.Vector3());
+        const targetLen = car.key === 'seal' ? 4.80 : 4.83;   // real-world metres
+        const longest = Math.max(size.x, size.z);
+        const s = targetLen / longest;
+        root.scale.setScalar(s);
+
+        const box2 = new THREE.Box3().setFromObject(root);
+        const c = box2.getCenter(new THREE.Vector3());
+        root.position.x += car.pos.x - c.x;
+        root.position.z += car.pos.z - c.z;
+        root.position.y += 0.16 - box2.min.y;
+
+        root.traverse(o=>{
+          if(o.isMesh){
+            o.castShadow = true; o.receiveShadow = true;
+            const m = o.material;
+            if(m && m.isMeshStandardMaterial){
+              m.envMapIntensity = 1.35;
+              if(m.transmission > 0) m.side = THREE.FrontSide;
+            }
+          }
+        });
+
+        const wrap = new THREE.Group();
+        wrap.add(root);
+        wrap.rotation.y = car.rot;
+        // rotate about the podium centre
+        root.position.sub(new THREE.Vector3(car.pos.x,0,car.pos.z));
+        wrap.position.set(car.pos.x,0,car.pos.z);
+        scene.add(wrap);
+        car.object = wrap;
+        progress[i] = 1; paintProgress();
+        resolve(true);
+      },
+      xhr=>{
+        if(xhr.total){ progress[i] = xhr.loaded/xhr.total; paintProgress(); }
+      },
+      err=>{
+        console.error('Could not load', car.file, err);
+        progress[i] = 1; paintProgress();
+        resolve(false);
+      }
+    );
+  });
+}
+
+/* ═══════════════════ CONTROLS ═══════════════════ */
+const keys = {};
+let locked = false, yaw = 0, pitch = 0, typing = false;
+
+addEventListener('keydown', e=>{
+  if(e.code === 'Tab'){ e.preventDefault(); focusInput(); return; }
+  if(typing) return;
+  keys[e.code] = true;
+  if(e.code === 'KeyV' && !e.repeat) startListening(true);
+});
+addEventListener('keyup', e=>{
+  keys[e.code] = false;
+  if(e.code === 'KeyV' && pushToTalk) stopListening();
+});
+
+renderer.domElement.addEventListener('click', ()=>{ if(!typing) renderer.domElement.requestPointerLock(); });
+document.addEventListener('pointerlockchange', ()=>{
+  locked = document.pointerLockElement === renderer.domElement;
+  document.getElementById('reticle').classList.toggle('on', locked);
+});
+document.addEventListener('mousemove', e=>{
+  if(!locked) return;
+  yaw   -= e.movementX * 0.0022;
+  pitch -= e.movementY * 0.0022;
+  pitch = Math.max(-1.15, Math.min(1.15, pitch));
+});
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ═══════════════════ NALEDI MOVEMENT ═══════════════════ */
+let walkTarget = null, walkPhase = 0, talkPhase = 0, speaking = false;
+
+function sendNalediTo(car){
+  const t = car ? { x: car.pos.x + 2.5, z: car.pos.z + 3.1 }
+                : { x: 0, z: 3.4 };
+  walkTarget = t;
+}
+
+function updateNaledi(dt){
+  let moving = false;
+  if(walkTarget){
+    const dx = walkTarget.x - naledi.position.x;
+    const dz = walkTarget.z - naledi.position.z;
+    const dist = Math.hypot(dx,dz);
+    if(dist > 0.12){
+      moving = true;
+      const step = Math.min(1.75*dt, dist);
+      naledi.position.x += dx/dist * step;
+      naledi.position.z += dz/dist * step;
+      const want = Math.atan2(dx,dz);
+      let diff = want - naledi.rotation.y;
+      while(diff >  Math.PI) diff -= Math.PI*2;
+      while(diff < -Math.PI) diff += Math.PI*2;
+      naledi.rotation.y += diff * Math.min(1, 7*dt);
+    } else {
+      walkTarget = null;
+    }
+  }
+
+  if(moving){
+    walkPhase += dt*9;
+    const sw = Math.sin(walkPhase)*0.55;
+    legs.l.rotation.x =  sw; legs.r.rotation.x = -sw;
+    arms.l.rotation.x = -sw*0.55; arms.r.rotation.x = sw*0.55;
+    naledi.position.y = Math.abs(Math.sin(walkPhase))*0.035;
+  } else {
+    walkPhase += dt*1.6;
+    const idle = Math.sin(walkPhase)*0.05;
+    legs.l.rotation.x *= 0.86; legs.r.rotation.x *= 0.86;
+    arms.l.rotation.x = idle - 0.04; arms.r.rotation.x = -idle - 0.04;
+    naledi.position.y = Math.sin(walkPhase)*0.012;
+
+    // face the player when idle
+    const dx = player.position.x - naledi.position.x;
+    const dz = player.position.z - naledi.position.z;
+    if(Math.hypot(dx,dz) < 7){
+      const want = Math.atan2(dx,dz);
+      let diff = want - naledi.rotation.y;
+      while(diff >  Math.PI) diff -= Math.PI*2;
+      while(diff < -Math.PI) diff += Math.PI*2;
+      naledi.rotation.y += diff * Math.min(1, 2.6*dt);
+    }
+  }
+
+  // head tracks the player's eye height
+  const local = naledi.worldToLocal(player.position.clone());
+  headPivot.rotation.y = THREE.MathUtils.clamp(Math.atan2(local.x, local.z), -0.7, 0.7);
+  headPivot.rotation.x = THREE.MathUtils.clamp(-Math.atan2(local.y - 1.53, Math.hypot(local.x,local.z)), -0.35, 0.35);
+
+  // mouth moves while she's speaking
+  if(speaking){
+    talkPhase += dt*17;
+    const o = 0.5 + Math.abs(Math.sin(talkPhase))*1.6;
+    naledi.userData.mouth.scale.set(1, o, 1);
+  } else {
+    naledi.userData.mouth.scale.y += (1 - naledi.userData.mouth.scale.y)*0.2;
+  }
+}
+
+/* ═══════════════════ HUD ═══════════════════ */
+const el = id => document.getElementById(id);
+const cardEl = el('card'), sayEl = el('say'), sayBody = el('say-body');
+
+function showCard(car){
+  el('c-model').textContent = car.model;
+  el('c-trim').textContent  = car.trim;
+  el('c-price').innerHTML   = car.price + '<small>Recommended retail</small>';
+  el('c-specs').innerHTML   = Object.entries(car.specs)
+    .map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+  cardEl.classList.add('on');
+}
+
+function say(text){
+  sayEl.classList.add('on');
+  sayBody.textContent = text;
+}
+function thinking(){
+  sayEl.classList.add('on');
+  sayBody.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+}
+let toastTimer;
+function toast(text, ms=4200){
+  const t = el('toast');
+  t.textContent = text; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('on'), ms);
+}
+
+/* ═══════════════════ VOICE OUT ═══════════════════ */
+let voice = null;
+function pickVoice(){
+  const all = speechSynthesis.getVoices();
+  if(!all.length) return;
+  voice = all.find(v=>v.lang === 'en-ZA')
+       || all.find(v=>/en-GB/.test(v.lang) && /female|Libby|Sonia|Hazel/i.test(v.name))
+       || all.find(v=>/en-GB/.test(v.lang))
+       || all.find(v=>/^en/.test(v.lang))
+       || all[0];
+}
+pickVoice();
+speechSynthesis.onvoiceschanged = pickVoice;
+
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  if(voice) u.voice = voice;
+  u.rate = 1.02; u.pitch = 1.06;
+  u.onstart = ()=>{ speaking = true; };
+  u.onend   = ()=>{ speaking = false; };
+  u.onerror = ()=>{ speaking = false; };
+  speechSynthesis.speak(u);
+}
+
+/* ═══════════════════ VOICE IN ═══════════════════
+   Everything here logs to the console with a [mic] prefix. If speech
+   stops working, the log tells you which stage failed. */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = el('mic'), micLabel = el('mic-label'), heard = el('heard');
+let recog = null, listening = false, pushToTalk = false, micReady = false;
+let micStream = null, analyser = null, levelData = null, sawAudio = false;
+
+const log = (...a)=>console.log('%c[mic]','color:#3fd8c8', ...a);
+
+function micUnavailable(reason){
+  micReady = false;
+  micBtn.classList.add('off');
+  micBtn.disabled = true;
+  micLabel.textContent = 'No mic';
+  el('mictip').innerHTML = reason + ' — <b>type your question</b> instead.';
+  log('unavailable:', reason);
+}
+
+/* A real level meter straight off the audio hardware. This is independent
+   of the speech API, so it separates "mic is dead" from "recogniser is dead". */
+async function openMic(){
+  if(micStream) return true;
+  try{
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true }
+    });
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if(ctx.state === 'suspended') await ctx.resume();
+    const src = ctx.createMediaStreamSource(micStream);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    levelData = new Uint8Array(analyser.frequencyBinCount);
+    src.connect(analyser);
+    const track = micStream.getAudioTracks()[0];
+    log('input device:', track.label || '(name hidden until permission)', '| enabled:', track.enabled, '| muted:', track.muted);
+    if(track.muted) toast('Your microphone is muted at the system level. Unmute it in your OS sound settings.', 7000);
+    return true;
+  }catch(err){
+    log('getUserMedia failed:', err.name, err.message);
+    if(err.name === 'NotAllowedError'){
+      micUnavailable('Microphone permission was denied');
+      toast('Microphone blocked. Click the padlock in the address bar, allow the mic, then reload.', 8000);
+    } else if(err.name === 'NotFoundError'){
+      micUnavailable('No microphone was found');
+      toast('No microphone detected. Check it is plugged in and selected as the input device.', 7000);
+    } else {
+      micUnavailable('Microphone could not be opened');
+      toast('Could not open the microphone: ' + err.name, 7000);
+    }
+    return false;
+  }
+}
+
+function micLevel(){
+  if(!analyser) return 0;
+  analyser.getByteTimeDomainData(levelData);
+  let peak = 0;
+  for(let i=0;i<levelData.length;i++) peak = Math.max(peak, Math.abs(levelData[i]-128));
+  return peak/128;
+}
+
+if(!SR){
+  micUnavailable(/Firefox/.test(navigator.userAgent)
+    ? 'Firefox has no speech recognition'
+    : 'This browser has no speech recognition');
+} else if(!window.isSecureContext){
+  micUnavailable('Microphone needs localhost or HTTPS');
+} else {
+  micReady = true;
+  el('mictip').innerHTML = 'Hold <b>V</b> to talk · press <b>Esc</b> first if you want to click <b>Talk</b>';
+
+  let buffer = '';
+  let watchdog = null;
+
+  function build(){
+    const r = new SR();
+    r.lang = 'en-ZA';
+    r.continuous = true;        // don't cut out on a short pause
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+
+    r.onstart = ()=>{
+      listening = true; buffer = ''; sawAudio = false;
+      micBtn.classList.add('live');
+      micLabel.textContent = 'Listening';
+      heard.textContent = '';
+      log('started, lang =', r.lang);
+      // If no audio reaches the recogniser within 2s, something upstream is wrong.
+      watchdog = setTimeout(()=>{
+        if(!sawAudio){
+          log('WARNING: no audio reached the recogniser after 2s');
+          toast('No audio is reaching the recogniser. Check your input device, or type below.', 7000);
+        }
+      }, 2000);
+    };
+    r.onaudiostart  = ()=>{ sawAudio = true; log('audio in'); };
+    r.onspeechstart = ()=>log('speech detected');
+    r.onspeechend   = ()=>log('speech ended');
+
+    r.onresult = e=>{
+      let interim = '';
+      buffer = '';
+      for(let i=0;i<e.results.length;i++){
+        const res = e.results[i];
+        if(res.isFinal) buffer += res[0].transcript;
+        else interim += res[0].transcript;
+      }
+      const shown = (buffer || interim).trim();
+      heard.textContent = shown ? '“' + shown + '”' : '';
+      if(buffer) log('final:', buffer.trim());
+    };
+
+    r.onerror = e=>{
+      log('error:', e.error, e.message || '');
+      clearTimeout(watchdog);
+      if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+        micUnavailable('Microphone permission was blocked');
+        toast('Microphone blocked. Allow it via the padlock in the address bar, then reload.', 8000);
+      } else if(e.error === 'no-speech'){
+        toast('Did not catch that — speak a little closer, or type below.');
+      } else if(e.error === 'audio-capture'){
+        micUnavailable('The microphone could not be captured');
+        toast('Another app may be holding the microphone. Close it and reload.', 7000);
+      } else if(e.error === 'network'){
+        toast('Speech recognition needs internet — Chrome sends audio to Google. Type below instead.', 8000);
+      } else if(e.error !== 'aborted'){
+        toast('Speech recognition error: ' + e.error, 6000);
+      }
+    };
+
+    r.onend = ()=>{
+      clearTimeout(watchdog);
+      listening = false;
+      micBtn.classList.remove('live');
+      micLabel.textContent = 'Talk';
+      log('ended. captured:', JSON.stringify(buffer.trim()));
+      const said = buffer.trim();
+      if(said){
+        setTimeout(()=>{ heard.textContent = ''; }, 900);
+        ask(said);
+      }
+    };
+    return r;
+  }
+  recog = build();
+}
+
+async function startListening(fromKey=false){
+  if(!micReady || listening) return;
+  pushToTalk = fromKey;
+  if(!(await openMic())) return;
+  if(speechSynthesis) speechSynthesis.cancel();   // don't transcribe Naledi
+  try{
+    recog.start();
+  }catch(err){
+    log('start() threw:', err.name, err.message);
+    if(err.name === 'InvalidStateError'){
+      // Recogniser is wedged mid-session. Rebuild and retry once.
+      try{ recog.abort(); }catch(_){}
+      recog = (function(){ const r = recog; return r; })();
+      setTimeout(()=>{ try{ recog.start(); }catch(e2){ log('retry failed:', e2.name); } }, 260);
+    } else {
+      toast('Could not start listening: ' + err.name, 6000);
+    }
+  }
+}
+function stopListening(){
+  if(!listening) return;
+  try{ recog.stop(); }catch(err){ log('stop() threw:', err.name); }
+}
+micBtn.addEventListener('click', ()=>{
+  if(listening) stopListening(); else startListening(false);
+});
+
+/* ═══════════════════ TEXT IN ═══════════════════ */
+const input = el('msg');
+function focusInput(){
+  if(locked) document.exitPointerLock();
+  input.focus();
+}
+input.addEventListener('focus', ()=>{ typing = true; for(const k in keys) keys[k] = false; });
+input.addEventListener('blur',  ()=>{ typing = false; });
+input.addEventListener('keydown', e=>{
+  e.stopPropagation();
+  if(e.key === 'Enter') submit();
+  if(e.key === 'Escape') input.blur();
+});
+el('send').addEventListener('click', submit);
+function submit(){
+  const v = input.value.trim();
+  if(!v) return;
+  input.value = '';
+  ask(v);
+}
+
+/* ═══════════════════ THE SALESPERSON'S BRAIN ═══════════════════ */
+let hasKey = false;
+fetch('/api/status').then(r=>r.json()).then(d=>{ hasKey = d.hasKey; }).catch(()=>{});
+
+const SYSTEM = `You are Naledi, a sales consultant at a BYD dealership in South Africa. You are on the showroom floor with a walk-in customer, standing near the cars.
+
+Vehicles on the floor:
+${FLEET.map(c=>`• ${c.model} — ${c.trim}, ${c.price}. ${Object.entries(c.specs).map(([k,v])=>k+': '+v).join('; ')}. ${c.hook} ${c.also}`).join('\n')}
+
+Ownership: ${SHARED}
+
+How you speak:
+- Warm, direct, and unhurried. Two or three sentences at a time — this is spoken out loud, so keep it conversational and skip lists.
+- South African context is natural to you: rands, loadshedding, kilometres, the Eskom tariff, wallboxes at home, long runs like Joburg to Durban.
+- Light local warmth is fine ("shame", "lekker", "ja") but do not overdo it — once in a while, not every line.
+- Never invent specs, features, colours, or finance figures you were not given. If you do not know, say you will confirm with the sales manager.
+- If a customer wants to buy or book a test drive, offer to take their details for the team.
+
+When the customer asks about a specific car, or when it makes sense to walk over to one, set "focus" so you move to that vehicle.
+
+Reply ONLY with JSON, no markdown fences:
+{"speech":"what you say out loud","focus":"seal" or "sealion7" or null}`;
+
+const history = [];
+let busy = false;
+
+async function ask(text){
+  if(busy) return;
+  busy = true;
+  if(speechSynthesis) speechSynthesis.cancel();
+  thinking();
+  history.push({ role:'user', content:text });
+  if(history.length > 20) history.splice(0, history.length - 20);
+
+  let reply = null;
+  if(hasKey){
+    try{
+      const res = await fetch('/api/chat', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ system: SYSTEM, messages: history })
+      });
+      if(res.ok){
+        const { text:raw } = await res.json();
+        reply = parse(raw);
+      } else if(res.status === 503){
+        hasKey = false;
+      }
+    }catch(_){ /* fall through */ }
+  }
+
+  if(!reply){
+    reply = scripted(text);
+    if(!hasKey) toast('Running without an API key — Naledi is using scripted answers.', 5000);
+  }
+
+  history.push({ role:'assistant', content: JSON.stringify(reply) });
+  say(reply.speech);
+  speak(reply.speech);
+
+  const car = FLEET.find(c=>c.key === reply.focus);
+  if(car){ sendNalediTo(car); showCard(car); }
+  busy = false;
+}
+
+function parse(raw){
+  if(!raw) return null;
+  let s = raw.trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if(a !== -1 && b > a) s = s.slice(a, b+1);
+  try{
+    const o = JSON.parse(s);
+    if(typeof o.speech === 'string' && o.speech.trim())
+      return { speech:o.speech.trim(), focus:o.focus ?? null };
+  }catch(_){}
+  return raw.length < 400 ? { speech: raw.trim(), focus:null } : null;
+}
+
+/* Offline fallback so the demo never dead-ends */
+function scripted(text){
+  const t = text.toLowerCase();
+  const seal = FLEET[0], lion = FLEET[1];
+  const wantsSeal = /\bseal\b|sedan|saloon|sport/.test(t) && !/sealion/.test(t);
+  const wantsLion = /sealion|suv|family|boot|space|crossover/.test(t);
+  const car = wantsLion ? lion : wantsSeal ? seal : null;
+
+  if(/price|cost|how much|afford|rand|finance|deposit/.test(t)){
+    return { speech: car
+      ? `The ${car.model} in ${car.trim.split(' · ')[0]} trim is ${car.price} recommended retail, and that includes the maintenance plan and a wallbox. Would you like me to work out a monthly figure for you?`
+      : `The Seal starts at ${seal.price} and the Sealion 7 at ${lion.price}, both including the five-year maintenance plan. Which one were you leaning towards?`,
+      focus: car?.key ?? null };
+  }
+  if(/range|far|distance|km|anxiety|durban|trip/.test(t)){
+    return { speech:`The Seal does 570 kilometres on the WLTP cycle and the Sealion 7 does 482. Realistically on a Joburg to Durban run you would stop once for a charge — about twenty minutes on a 150 kilowatt charger.`, focus: car?.key ?? null };
+  }
+  if(/charg|wallbox|eskom|plug|loadshed|v2l|power/.test(t)){
+    return { speech:`Both take 150 kilowatt DC fast charging, so 20 to 80 percent is around half an hour. You get a 7 kilowatt wallbox for home and V2L, which means the car can run your fridge and lights during loadshedding.`, focus: car?.key ?? null };
+  }
+  if(/battery|blade|safe|safety|warranty/.test(t)){
+    return { speech:`Both use BYD's Blade Battery — lithium iron phosphate, built into the body structure, and it carries an eight-year warranty. It is one of the safest chemistries on the market.`, focus: car?.key ?? null };
+  }
+  if(/fast|quick|power|performance|0-100|speed/.test(t)){
+    return { speech:`The Seal Premium does nought to a hundred in 5.9 seconds. If you want proper shove, the AWD Performance does it in 3.8 for R1 211 900.`, focus:'seal' };
+  }
+  if(/test drive|book|buy|order|available|stock/.test(t)){
+    return { speech:`I can get you behind the wheel today — we keep demo units of both. Shall I take your name and number so the team can set it up?`, focus:null };
+  }
+  if(car){
+    return { speech:`${car.hook} ${car.also}`, focus:car.key };
+  }
+  if(/hi|hello|hey|howzit|molo|sawubona|good/.test(t)){
+    return { speech:`Howzit, welcome to BYD. We have two on the floor today — the Seal, our electric sedan, and the Sealion 7 SUV. What are you driving at the moment?`, focus:null };
+  }
+  return { speech:`Good question — let me point you at the metal. On my left is the Seal, the electric sedan, and on my right the Sealion 7 SUV. Which one shall we look at?`, focus:null };
+}
+
+/* ═══════════════════ LOOP ═══════════════════ */
+const clock = new THREE.Clock();
+const vel = new THREE.Vector3();
+let quietFrames = 0;
+const BOUND = { x:18.5, z:14.5 };
+
+function frame(){
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t  = clock.elapsedTime;
+
+  // movement
+  const speed = (keys.ShiftLeft || keys.ShiftRight) ? 6.4 : 3.4;
+  const fwd = (keys.KeyW||keys.ArrowUp?1:0) - (keys.KeyS||keys.ArrowDown?1:0);
+  const str = (keys.KeyD||keys.ArrowRight?1:0) - (keys.KeyA||keys.ArrowLeft?1:0);
+  const target = new THREE.Vector3(
+    (Math.sin(yaw)*-fwd + Math.cos(yaw)*str),
+    0,
+    (Math.cos(yaw)*-fwd - Math.sin(yaw)*str)
+  );
+  if(target.lengthSq() > 0) target.normalize().multiplyScalar(speed);
+  vel.lerp(target, 1 - Math.pow(0.0016, dt));
+  player.position.addScaledVector(vel, dt);
+  player.position.x = THREE.MathUtils.clamp(player.position.x, -BOUND.x, BOUND.x);
+  player.position.z = THREE.MathUtils.clamp(player.position.z, -BOUND.z, BOUND.z);
+
+  // don't walk through the cars
+  for(const car of FLEET){
+    const dx = player.position.x - car.pos.x;
+    const dz = player.position.z - car.pos.z;
+    const d  = Math.hypot(dx,dz);
+    if(d < 3.4 && d > 0.001){
+      player.position.x = car.pos.x + dx/d*3.4;
+      player.position.z = car.pos.z + dz/d*3.4;
+    }
+  }
+
+  // head bob
+  const moving = vel.lengthSq() > 0.6;
+  player.position.y = 1.62 + (moving ? Math.sin(t*10)*0.022 : 0);
+
+  camera.rotation.set(pitch, 0, 0);
+  player.rotation.set(0, yaw, 0);
+
+  updateNaledi(dt);
+
+  // proximity nudge
+  const near = naledi.position.distanceTo(player.position) < 4.6;
+  el('nudge').classList.toggle('on', locked && !near && !sayEl.classList.contains('on'));
+
+  // live input level — proves whether audio is actually arriving
+  const meter = el('meter');
+  meter.classList.toggle('on', listening);
+  if(listening){
+    const lv = micLevel();
+    quietFrames = lv < 0.012 ? quietFrames + 1 : 0;
+    meter.classList.toggle('quiet', quietFrames > 90);
+    meter.firstElementChild.style.width = Math.min(100, lv*260).toFixed(1) + '%';
+  } else { quietFrames = 0; }
+
+  podiums.forEach((r,i)=>{ r.material.opacity = 0.36 + Math.sin(t*1.5 + i)*0.16; });
+  tideMat.color.setHSL(0.47, 0.7, 0.55 + Math.sin(t*0.8)*0.08);
+
+  renderer.render(scene, camera);
+}
+
+/* ═══════════════════ START ═══════════════════ */
+(async function start(){
+  const results = await Promise.all(FLEET.map(loadCar));
+  const failed = FLEET.filter((_,i)=>!results[i]);
+
+  if(failed.length === FLEET.length){
+    bootNote.style.display = 'none';
+    bootErr.style.display = 'block';
+    bootErr.innerHTML = 'The vehicle models did not load. Check that <b>2024_byd_seal.glb</b> and <b>2024_byd_sealion_7.glb</b> are inside the <b>models</b> folder next to server.py, then reload.';
+    return;
+  }
+  if(failed.length){
+    toast(failed.map(c=>c.model).join(' and ') + ' did not load. Check the models folder.', 8000);
+  }
+
+  bootNote.textContent = 'Ready';
+  el('boot').style.display = 'none';
+  el('gate').classList.add('on');
+  frame();
+
+  el('enter').addEventListener('click', async ()=>{
+    el('gate').classList.remove('on');
+    el('hud').classList.add('on');
+    // Ask for the mic now, on a real user gesture, so the prompt isn't
+    // competing with pointer lock later.
+    if(micReady) await openMic();
+    renderer.domElement.requestPointerLock();
+    setTimeout(()=>{
+      const opener = "Howzit, welcome to BYD. I'm Naledi. We've got the Seal and the Sealion 7 on the floor today — ask me anything, or tell me what you drive now and I'll point you at the right one.";
+      say(opener); speak(opener);
+    }, 700);
+  });
+})();
+</script>
+</body>
+</html>
