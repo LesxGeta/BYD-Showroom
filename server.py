@@ -34,53 +34,73 @@ import urllib.request
 
 
 
+# ------------------------------------------------------------------
+#  CONFIGURATION
+#
+#  Every secret is read from the environment. Nothing is hard-coded,
+#  so this file is safe to commit.
+#
+#  Local: copy .env.example to .env and fill it in. This server reads
+#  it automatically at startup, and .env is gitignored.
+# ------------------------------------------------------------------
+
+
+def load_env_file():
+    """Read KEY=value pairs from a .env beside this script.
+
+    Real environment variables always win, so a deployment can override
+    anything here. Tolerates what Windows editors produce: a BOM, CRLF
+    endings, quoted values, and set/export/$env: prefixes."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    found = [os.path.join(here, n) for n in
+             (".env", ".env.txt", "env", "env.txt")
+             if os.path.exists(os.path.join(here, n))]
+    if not found:
+        return None
+
+    names, loaded = [], []
+    for path in found:
+        names.append(os.path.basename(path))
+        with open(path, encoding="utf-8-sig") as fh:
+            for raw in fh:
+                line = raw.replace("\ufeff", "").replace("\x00", "").strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                for prefix in ("set ", "export "):
+                    if line.lower().startswith(prefix):
+                        line = line[len(prefix):]
+                k, v = line.split("=", 1)
+                k = k.strip().lstrip("$").replace("env:", "")
+                v = v.strip().strip('"').strip("'").strip()
+                if k and k not in os.environ:
+                    os.environ[k] = v
+                    loaded.append(k)
+    return (names, loaded)
+
+
+_ENV_RESULT = load_env_file()
+
 PORT = int(os.environ.get("PORT", "8000"))
+# 0.0.0.0 means "listen on all interfaces". Override with HOST=127.0.0.1
+# if you specifically want it unreachable from the local network.
+HOST = os.environ.get("HOST", "0.0.0.0")
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
+PUBLIC = os.path.join(ROOT, "public")
 
-# ------------------------------------------------------------------
-
-GEMINI_KEY = "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-
-# Leave this empty and the server asks Google which models your key can
-# actually use, then picks the best one. Only fill it in to force a choice.
-GEMINI_MODEL = ""
-
-ANTHROPIC_KEY = ""          # optional alternative
-
-# ------------------------------------------------------------------
-#  EMAIL. Fill these in to actually send the summary.
-#  Leave SMTP_USER empty and the app still works — it just saves the
-#  lead to disk without emailing.
-#
-#  Gmail: you cannot use your normal password. Turn on 2-Step
-#  Verification, then create an App Password at
-#  myaccount.google.com/apppasswords and paste the 16 characters below.
-# ------------------------------------------------------------------
-
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587                     # 587 = STARTTLS, 465 = SSL
-SMTP_USER = "lesleyxinti@gmail.com"
-SMTP_PASS = "svko kwuw vajy sgtw"   # spaces are stripped automatically
-MAIL_FROM_NAME = "BYD South Africa"
-MAIL_BCC = ""                       # optional: copy every lead to the sales inbox
-
-# ------------------------------------------------------------------
-
-
-# ------------------------------------------------------------------
-
-# Environment variables still win if set, but you do not need them.
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "").strip() or GEMINI_KEY
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip() or ANTHROPIC_KEY
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip() or GEMINI_MODEL
-ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip()
+ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6").strip()
 PROVIDER = os.environ.get("AI_PROVIDER", "auto").strip().lower()
-SMTP_USER = os.environ.get("SMTP_USER", "").strip() or SMTP_USER
-SMTP_PASS = os.environ.get("SMTP_PASS", "").strip() or SMTP_PASS
-# Google displays app passwords in four groups of four for readability;
-# the actual password is the 16 characters with no spaces.
-SMTP_PASS = SMTP_PASS.replace(" ", "")
+
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "").strip()
+# Google shows app passwords in groups of four; the real value has no spaces.
+SMTP_PASS = os.environ.get("SMTP_PASS", "").replace(" ", "").strip()
+MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "BYD South Africa").strip()
+MAIL_BCC = os.environ.get("MAIL_BCC", "").strip()
 
 # Remembered once Google accepts one, so we don't re-probe on every call.
 _gemini_auth_style = None
@@ -271,7 +291,7 @@ def send_lead_email(lead):
 
     rel = BROCHURES.get(car)
     if rel:
-        path = os.path.join(ROOT, rel)
+        path = os.path.join(PUBLIC, rel)
         if os.path.exists(path):
             size = os.path.getsize(path)
             if size < 12_000_000:      # stay well clear of the 25 MB ceiling
@@ -586,7 +606,7 @@ def read_all(filename):
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=ROOT, **kwargs)
+        super().__init__(*args, directory=PUBLIC, **kwargs)
 
     def log_message(self, fmt, *args):
         if "/api/" in str(args):
@@ -743,20 +763,20 @@ class Server(socketserver.ThreadingTCPServer):
     daemon_threads = True
 
 
-BUILD = "v7 — key in code, no env files"
+BUILD = "v10 \u2014 binds 0.0.0.0"
 
 
 def preflight():
     print("\n  BYD Showroom server  [%s]" % BUILD)
     missing = [
         name for name in ("2024_byd_seal.glb", "2024_byd_sealion_7.glb")
-        if not os.path.exists(os.path.join(ROOT, "models", name))
+        if not os.path.exists(os.path.join(PUBLIC, "models", name))
     ]
     if missing:
-        print("  Models not found in ./models/:")
+        print("  Vehicle models not found in ./public/models/:")
         for name in missing:
             print("     - " + name)
-        print("   Copy both .glb files into the models folder, then restart.\n")
+        print("   See docs/ASSETS.md for where to get them.\n")
 
 
     p = active_provider()
@@ -803,14 +823,15 @@ def preflight():
         except OSError:
             pass
         print("\n  Expected a file called '.env' containing:")
-        print("     GEMINI_API_KEY=AQ.Ab8RN6...")
+        print("     GEMINI_API_KEY=your-key-here")
         print("  Windows often saves it as '.env.txt' — that is fine, this")
         print("  server accepts that name too. If you see no env file above,")
         print("  it is in a different folder from the one you are running.")
         print("\n  Or set it in THIS terminal before starting:")
-        print('     $env:GEMINI_API_KEY="AQ.Ab8RN6..."')
+        print('     $env:GEMINI_API_KEY="your-key-here"')
 
-    print("\n  Showroom    http://localhost:%d" % PORT)
+    print("\n  Listening on %s:%d" % (HOST, PORT))
+    print("  Showroom    http://localhost:%d" % PORT)
     print("  Mic check   http://localhost:%d/mic-test.html" % PORT)
     print("  Diagnose    http://localhost:%d/api/diag" % PORT)
     print("  Email test  http://localhost:%d/mail-test.html" % PORT)
@@ -837,7 +858,11 @@ def preflight():
 
 if __name__ == "__main__":
     preflight()
-    with Server(("127.0.0.1", PORT), Handler) as httpd:
+    # Bind to every interface. Hosting platforms (Render, Railway, Fly)
+    # route traffic to the container's external address and will not see
+    # a server listening only on localhost. This still answers on
+    # http://localhost:PORT during development, so nothing changes there.
+    with Server((HOST, PORT), Handler) as httpd:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
