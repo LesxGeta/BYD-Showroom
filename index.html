@@ -204,27 +204,118 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #lead .no:hover{color:var(--white)}
 #lead .fine{font-size:.63rem;color:var(--ink-dim);margin-top:16px;line-height:1.6}
 
+#voicepanel{position:fixed;top:66px;right:20px;z-index:80;width:min(340px,calc(100vw - 40px));
+background:rgba(25,28,30,.97);backdrop-filter:blur(20px);border:1px solid var(--hairline);
+border-radius:5px;padding:16px 18px;display:none;max-height:70vh;overflow-y:auto}
+#voicepanel.on{display:block}
+.vhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.vhead b{display:block;font-size:.82rem;font-weight:600}
+.vhead span{display:block;font-size:.68rem;color:var(--ink);margin-top:4px;line-height:1.5}
+#voiceclose{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);
+border:1px solid var(--hairline);border-radius:3px;padding:5px 9px;font-weight:600;flex:none}
+#voiceclose:hover{color:var(--white)}
+.vrow{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--hairline)}
+.vrow.on{background:var(--byd-blue-soft);margin:0 -18px;padding-left:18px;padding-right:18px}
+.vmeta{flex:1;min-width:0}
+.vmeta b{display:block;font-size:.79rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vmeta span{display:block;font-size:.64rem;color:var(--ink-dim);margin-top:2px}
+.vplay,.vuse{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;padding:7px 10px;border-radius:3px;flex:none}
+.vplay{background:rgba(255,255,255,.07);color:var(--ink)}
+.vplay:hover{background:rgba(255,255,255,.14);color:var(--white)}
+.vuse{background:var(--byd-blue-soft);color:var(--byd-blue)}
+.vuse:hover{background:rgba(64,162,227,.24)}
+.vrow.on .vuse{background:var(--byd-blue);color:#08243a}
+.vnote{font-size:.66rem;color:var(--ink-dim);line-height:1.6;margin-top:14px;padding-top:12px;border-top:1px solid var(--hairline)}
+
 #toast{position:fixed;left:50%;transform:translateX(-50%);z-index:60;background:var(--surface-2);border:1px solid var(--hairline);border-left:2px solid var(--byd-blue);color:rgba(255,255,255,.9);padding:12px 18px;border-radius:3px;font-size:.76rem;opacity:0;transition:opacity .3s;pointer-events:none;max-width:min(480px,88vw);text-align:left;line-height:1.6;top:78px}
 #toast.on{opacity:1}
 #credit{position:fixed;bottom:5px;left:11px;font-size:.54rem;color:rgba(255,255,255,.2);z-index:21;pointer-events:none}
 #hint{position:fixed;bottom:calc(50% - 120px);left:50%;transform:translateX(-50%);font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.42);z-index:24;opacity:0;transition:opacity .5s;pointer-events:none;font-weight:500}
 #hint.on{opacity:1}
 
+/* ── Mobile ───────────────────────────────────────────────────────────
+   The desktop layout assumes a wide viewport and plenty of vertical
+   room. On a phone the header wraps to three lines, the tools overflow
+   off-screen, and the panel covers the car it is describing. This is a
+   different layout, not a scaled-down one. */
 @media(max-width:820px){
-  #rail{right:12px;gap:0}
+  /* Header: logo and vehicle name only. Tools move to a scroll strip. */
+  #top{padding:10px 12px;flex-direction:column;align-items:stretch;gap:9px;
+       background:linear-gradient(to bottom,rgba(14,16,18,.92),rgba(14,16,18,.55) 70%,transparent)}
+  #top .lockup{gap:9px;align-items:center}
+  .logo{height:19px}
+  #top .divider{height:16px}
+  #top .vh{font-size:.62rem;font-weight:600;line-height:1.25;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
+  #top .vh small{display:none}
+
+  /* Tools scroll horizontally rather than overflowing off the edge. */
+  #tools{pointer-events:auto;overflow-x:auto;gap:6px;padding-bottom:2px;
+         scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #tools::-webkit-scrollbar{display:none}
+  .tool{padding:8px 11px;font-size:.58rem;flex:none;min-height:34px}
+
+  /* Stop rail: pips only, vertically centred, out of the way. */
+  #rail{right:8px;gap:0}
   #rail .lbl{display:none}
-  #top{padding:12px 14px}
-  .tool{padding:7px 9px;font-size:.56rem}
-  #panel{left:10px;right:10px;bottom:10px;width:auto}
-  #panel.hidden{transform:translateY(calc(100% - 30px))}
+  #rail button{padding:9px 0}          /* taller tap target */
+  #rail .pip{width:14px}
+  #rail button.here .pip{width:24px}
+
+  /* Panel becomes a bottom sheet. Capped so the car stays visible. */
+  #panel{left:8px;right:8px;bottom:8px;width:auto}
+  #panel.hidden{transform:translateY(calc(100% - 34px))}
   #panel.hidden #collapse{position:static;left:auto}
-  #speech{max-height:44vh;padding:13px 15px}
-  #line{font-size:.86rem}
-  .spot .tag{font-size:.55rem;left:26px}
-  #collapse{align-self:flex-end}
+  #speech{max-height:38vh;padding:13px 14px;border-radius:8px}
+  #line{font-size:.88rem;line-height:1.65}
+  #speech .who{margin-bottom:8px}
+
+  /* Chips need real tap targets — 44px is the accepted minimum. */
+  .chip{padding:12px 13px;font-size:.82rem;min-height:44px;
+        display:flex;align-items:center}
+  #chips{gap:7px;margin-top:11px}
+
+  /* Input row: bigger controls, 16px font so iOS doesn't zoom on focus. */
+  #row{padding:5px 5px 5px 12px}
+  #msg{font-size:16px;padding:10px 0}
+  .act,#mic{padding:11px 13px;font-size:.62rem;min-height:42px}
+  #collapse{align-self:flex-end;padding:8px 14px;min-height:34px}
+  #mictip{font-size:.55rem}
+
+  .spot .tag{font-size:.55rem;left:24px;padding:4px 8px}
+  #hint{bottom:auto;top:58%;font-size:.58rem}
+  #toast{top:auto;bottom:calc(38vh + 80px);left:8px;right:8px;
+         transform:none;max-width:none;font-size:.8rem}
+
+  /* Loadshedding overlay is sized for a wide screen otherwise. */
+  #shedcap{top:16%;padding:0 16px}
+  #appliances{gap:16px;margin-top:20px}
+  .app .ic{font-size:1.3rem}
+
+  /* Summary sheet fills the screen rather than floating in it. */
+  #lead{padding:0;align-items:flex-end}
+  #lead .box{max-width:none;border-radius:12px 12px 0 0;max-height:94vh;overflow-y:auto}
+  #lead .head{padding:20px 20px 16px}
+  #lead .body{padding:18px 20px 24px}
+  #lead .fields{grid-template-columns:1fr}
+  #lead input,#lead select{font-size:16px;padding:13px 12px}
+  #lead .btns{flex-direction:column-reverse;gap:8px}
+  #lead .go2,#lead .no{width:100%;padding:15px}
 }
-@media(max-height:620px){
+
+/* Landscape phone: very little vertical room, so the sheet shrinks and
+   the panel narrows to leave the car visible beside it. */
+@media(max-width:920px) and (orientation:landscape) and (max-height:520px){
+  #top{flex-direction:row;align-items:center;padding:8px 12px}
+  #panel{width:min(330px,52vw);right:auto}
   #speech{max-height:52vh}
+  #chips{gap:5px}
+  .chip{min-height:38px;padding:9px 12px;font-size:.78rem}
+  #shedcap{top:8%}
+}
+
+@media(max-height:620px){
+  #speech{max-height:46vh}
 }
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
 </style>
@@ -263,6 +354,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <button class="tool aistat dead" id="aibadge" title="Checking…">Checking</button>
       <button class="tool" id="plainbtn" title="Explain without car jargon">Plain English</button>
       <button class="tool" id="mutebtn" title="Naledi's voice">Voice on</button>
+      <button class="tool" id="voicebtn" title="Choose which voice she uses">Voice&hellip;</button>
       <button class="tool" id="switchbtn">Other model</button>
     </div>
   </div>
@@ -338,6 +430,20 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <div class="fine">Demo only &mdash; details are written to a local file on this machine and nothing is emailed. Specifications from official BYD South Africa material; BYD reserves the right to vary them.</div>
   </div>
 </div></div>
+
+<div id="voicepanel">
+  <div class="vhead">
+    <div>
+      <b>Naledi&rsquo;s voice</b>
+      <span>Voices come from your browser. Edge and Chrome differ &mdash; try both.</span>
+    </div>
+    <button id="voiceclose">Close</button>
+  </div>
+  <div id="voicelist"></div>
+  <p class="vnote">Neural voices are streamed and sound noticeably more natural
+  than local ones. If nothing here is good enough, the seven tour stops can be
+  pre-recorded instead.</p>
+</div>
 
 <div id="toast"></div>
 <div id="credit">Models by Ddiaz Design (Sketchfab) · CC BY-NC-SA 4.0 · Demo, not an official BYD product</div>
@@ -471,15 +577,76 @@ const STOPS = [
 
 const SHARED_FACTS = `Warranty: 5 years/100 000 km vehicle, 8 years/150 000 km battery, 5 year/100 000 km maintenance plan included. A 7 kW home wallbox and a 2.2 kW portable charger come with the car. V2L standard. Eskom home tariff averages about R2.72/kWh. BYD SA dealers: Sandton, Cape Town, Umhlanga, Pretoria, Port Elizabeth, Bloemfontein and growing.`;
 
+/* ════════════════ DEVICE PROFILE ════════════════
+   A phone GPU has a fraction of a desktop's memory. Rendering at full
+   pixel ratio with antialiasing and four shadow maps, while holding two
+   car models and a character, exhausts it — the context is lost and the
+   canvas goes white while audio carries on regardless.
+
+   So mobile gets a reduced profile. It looks slightly softer; it works. */
+const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+                  || Math.min(innerWidth, innerHeight) < 700;
+
+const PROFILE = IS_MOBILE ? {
+  pixelRatio: Math.min(devicePixelRatio, 1.5),
+  antialias: false,
+  shadows: false,          // four shadow maps is the single biggest saving
+  keyShadow: 1024,
+  spotShadow: 512,
+  envSamples: 0.08,
+  loadBothCars: false,     // load only what is being shown
+} : {
+  pixelRatio: Math.min(devicePixelRatio, 2),
+  antialias: true,
+  shadows: true,
+  keyShadow: 2048,
+  spotShadow: 1024,
+  envSamples: 0.04,
+  loadBothCars: true,
+};
+
 /* ════════════════ RENDERER ════════════════ */
-const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({
+    antialias: PROFILE.antialias,
+    powerPreference: IS_MOBILE ? 'default' : 'high-performance',
+    failIfMajorPerformanceCaveat: false,
+  });
+} catch (err) {
+  document.getElementById('boot').innerHTML =
+    '<div style="max-width:32ch;text-align:center;line-height:1.7">' +
+    '<div style="font-size:1.1rem;font-weight:600;margin-bottom:10px">' +
+    'This device cannot display the showroom</div>' +
+    '<div style="font-size:.85rem;color:rgba(255,255,255,.6)">' +
+    'It needs WebGL, which your browser has not made available. ' +
+    'Try Chrome, or a device with a newer graphics driver.</div></div>';
+  throw err;
+}
+
+renderer.setPixelRatio(PROFILE.pixelRatio);
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = PROFILE.shadows;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = IS_MOBILE ? 1.15 : 1.05;   // compensate for no AA
 document.body.appendChild(renderer.domElement);
+
+log('device profile:', IS_MOBILE ? 'mobile' : 'desktop',
+    '| pixelRatio', PROFILE.pixelRatio, '| shadows', PROFILE.shadows);
+
+/* A lost context is the failure mode that produces a white screen with
+   working audio. Catch it and say so rather than showing nothing. */
+renderer.domElement.addEventListener('webglcontextlost', e => {
+  e.preventDefault();
+  log('WebGL context lost');
+  toast('The 3D view ran out of graphics memory. Reload to try again.', 12000);
+}, false);
+
+renderer.domElement.addEventListener('webglcontextrestored', () => {
+  log('WebGL context restored');
+  toast('Graphics restored.', 4000);
+}, false);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0E1012);
@@ -487,13 +654,14 @@ scene.fog = new THREE.Fog(0x0E1012, 22, 55);
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.05, 140);
 
 const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environment = pmrem.fromScene(new RoomEnvironment(), PROFILE.envSamples).texture;
 
 const hemi = new THREE.HemisphereLight(0x9dc4dd, 0x14171a, 0.5);
 scene.add(hemi);
 const key = new THREE.DirectionalLight(0xdff0ff, 1.15);
-key.position.set(6,13,7); key.castShadow = true;
-key.shadow.mapSize.set(2048,2048);
+key.position.set(6,13,7);
+key.castShadow = PROFILE.shadows;
+key.shadow.mapSize.set(PROFILE.keyShadow, PROFILE.keyShadow);
 key.shadow.camera.near=1; key.shadow.camera.far=40;
 key.shadow.camera.left=-12; key.shadow.camera.right=12;
 key.shadow.camera.top=12; key.shadow.camera.bottom=-12;
@@ -504,7 +672,6 @@ const floor = new THREE.Mesh(new THREE.CircleGeometry(30,72),
   new THREE.MeshStandardMaterial({ color:0x121416, metalness:0.62, roughness:0.22 }));
 floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
 
-const DAIS_TOP = 0.14;          // podium surface height; Naledi stands on this
 const dais = new THREE.Mesh(new THREE.CylinderGeometry(4.3,4.45,0.14,72),
   new THREE.MeshStandardMaterial({ color:0x1e2225, metalness:0.5, roughness:0.34 }));
 dais.position.y = 0.07; dais.receiveShadow = true; scene.add(dais);
@@ -519,7 +686,9 @@ for(const a of [0, 120, 240]){
   const s = new THREE.SpotLight(0xfff6e8, 110, 22, Math.PI/6.5, .55, 1.6);
   s.position.set(Math.sin(a*Math.PI/180)*5.5, 7.4, Math.cos(a*Math.PI/180)*5.5);
   s.target.position.set(0,0.6,0);
-  s.castShadow = true; s.shadow.mapSize.set(1024,1024); s.shadow.bias=-0.0008;
+  s.castShadow = PROFILE.shadows;
+  s.shadow.mapSize.set(PROFILE.spotShadow, PROFILE.spotShadow);
+  s.shadow.bias = -0.0008;
   scene.add(s, s.target); spots.push(s);
 }
 const rim = new THREE.PointLight(0x40A2E3, 34, 26, 2);
@@ -586,15 +755,13 @@ function loadNaledi(){
       root.scale.multiplyScalar(s);
       log('scale factor applied:', s.toFixed(4));
 
-      // Feet on the podium, centred on the origin. The dais top sits at
-      // DAIS_TOP, so placing her at y=0 buries her feet in it.
+      // Feet on the floor, centred on the origin.
       root.updateWorldMatrix(true, true);
       const box2 = new THREE.Box3().setFromObject(root);
       const c = box2.getCenter(new THREE.Vector3());
       root.position.x -= c.x;
       root.position.z -= c.z;
       root.position.y -= box2.min.y;
-      naledi.position.y = DAIS_TOP;
 
       const finalBox = new THREE.Box3().setFromObject(root);
       const fs = finalBox.getSize(new THREE.Vector3());
@@ -759,7 +926,10 @@ const want = { ...cam };
 let dragging = false, lastX=0, lastY=0, userMoved=false, idleSpin=0;
 
 function setShot(stop){
-  want.az = stop.cam.az; want.el = stop.cam.el; want.dist = stop.cam.dist;
+  want.az = stop.cam.az;
+  want.el = stop.cam.el;
+  // Phones frame tighter, so sit back a touch to keep the car whole.
+  want.dist = stop.cam.dist * (IS_MOBILE ? 1.18 : 1);
   const p = spotPos(stop.spot);
   want.tx = p ? p.x*0.55 : 0;
   want.ty = p ? Math.max(0.5, p.y*0.85) : 0.8;
@@ -798,13 +968,23 @@ renderer.domElement.addEventListener('touchmove', e=>{
 addEventListener('touchend', ()=>{ pinch = 0; });
 
 function applyViewOffset(){
-  // On wide screens the panel occupies the left ~390px, so shift the
-  // frustum to seat the car in the clear space to its right.
   if(innerWidth > 820){
-    const shift = -150;
-    camera.setViewOffset(innerWidth, innerHeight, shift, 0, innerWidth, innerHeight);
+    // Wide screens: the panel occupies the left ~390px, so shift the
+    // frustum to seat the car in the clear space beside it.
+    camera.setViewOffset(innerWidth, innerHeight, -150, 0, innerWidth, innerHeight);
+    camera.fov = 46;
   } else {
+    // Phones: the bottom sheet covers the lower ~38%, so lift the car
+    // into the upper half rather than centring it behind the panel.
+    const portrait = innerHeight > innerWidth;
     camera.clearViewOffset();
+    if(portrait){
+      camera.setViewOffset(innerWidth, innerHeight, 0,
+                           innerHeight * 0.14, innerWidth, innerHeight);
+    }
+    // A narrow viewport crops a 46° horizontal field badly. Widening it
+    // keeps the whole car in frame without moving the camera back.
+    camera.fov = portrait ? 62 : 54;
   }
   camera.updateProjectionMatrix();
 }
@@ -1103,14 +1283,94 @@ function runLoadshedding(){
 
 /* ════════════════ VOICE OUT ════════════════ */
 let voice = null;
-function pickVoice(){
+let voices = [];
+
+/* Rank the installed voices. There is no reliable quality flag, so we go
+   on what the platform tells us: South African English first, then other
+   African/UK English, and prefer cloud voices (localService === false),
+   which on Edge are Microsoft's neural ones and sound markedly better
+   than anything installed locally. */
+function scoreVoice(v){
+  if(!/^en/i.test(v.lang)) return -1;
+  let n = 0;
+  const name = v.name.toLowerCase();
+  if(/en[-_]za/i.test(v.lang)) n += 100;
+  else if(/en[-_](gb|ie)/i.test(v.lang)) n += 40;
+  else if(/en[-_](au|nz)/i.test(v.lang)) n += 30;
+  else n += 10;
+  if(v.localService === false) n += 35;          // cloud/neural
+  if(/neural|natural|online|premium|enhanced/.test(name)) n += 30;
+  if(/leah|thando|ayanda|tessa/.test(name)) n += 22;  // known female en-ZA voices
+  if(/luke|willem/.test(name)) n += 14;               // male en-ZA
+  if(/female|woman|libby|sonia|hazel|aria|jenny|emma/.test(name)) n += 12;
+  if(/google/.test(name)) n += 8;
+  if(/compact|espeak|microsoft david|zira/.test(name)) n -= 30;
+  return n;
+}
+
+function refreshVoices(){
   const all = speechSynthesis.getVoices();
   if(!all.length) return;
-  voice = all.find(v=>v.lang==='en-ZA')
-       || all.find(v=>/en-GB/.test(v.lang) && /female|Libby|Sonia|Hazel/i.test(v.name))
-       || all.find(v=>/en-GB/.test(v.lang)) || all.find(v=>/^en/.test(v.lang)) || all[0];
+  voices = all.filter(v=>scoreVoice(v) >= 0)
+              .sort((a,b)=>scoreVoice(b)-scoreVoice(a));
+  const saved = savedVoiceName();
+  voice = (saved && all.find(v=>v.name === saved)) || voices[0] || all[0];
+  buildVoiceMenu();
+  log('voices available:', all.length,
+      '| best:', voice && voice.name, voice && voice.lang,
+      '| cloud:', voice && voice.localService === false);
 }
-pickVoice(); speechSynthesis.onvoiceschanged = pickVoice;
+
+/* Persist the choice for this browser without using storage APIs that
+   are blocked in some contexts — a cookie is enough for a preference. */
+function savedVoiceName(){
+  const m = document.cookie.match(/(?:^|; )bydVoice=([^;]*)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function saveVoiceName(name){
+  document.cookie = 'bydVoice=' + encodeURIComponent(name)
+                  + ';path=/;max-age=31536000;SameSite=Lax';
+}
+
+const SAMPLE = "Howzit, welcome to BYD. The Seal does 570 kilometres on a charge, "
+             + "and during loadshedding it'll run your fridge and your Wi-Fi.";
+
+function buildVoiceMenu(){
+  const box = el('voicelist');
+  if(!box) return;
+  box.innerHTML = '';
+  if(!voices.length){
+    box.innerHTML = '<p class="vnote">No speech voices found in this browser.</p>';
+    return;
+  }
+  voices.forEach(v=>{
+    const row = document.createElement('div');
+    row.className = 'vrow' + (voice && v.name === voice.name ? ' on' : '');
+    const cloud = v.localService === false;
+    row.innerHTML =
+      '<div class="vmeta"><b>' + v.name.replace(/^Microsoft /,'') + '</b>' +
+      '<span>' + v.lang + (cloud ? ' · neural' : ' · local') + '</span></div>' +
+      '<button class="vplay">Hear</button>' +
+      '<button class="vuse">Use</button>';
+    row.querySelector('.vplay').addEventListener('click', e=>{
+      e.stopPropagation();
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(SAMPLE);
+      u.voice = v; u.rate = 1.02; u.pitch = 1.05;
+      speechSynthesis.speak(u);
+    });
+    row.querySelector('.vuse').addEventListener('click', ()=>{
+      voice = v;
+      saveVoiceName(v.name);
+      buildVoiceMenu();
+      toast('Naledi will use ' + v.name + '.', 3000);
+    });
+    box.appendChild(row);
+  });
+}
+
+refreshVoices();
+speechSynthesis.onvoiceschanged = refreshVoices;
 
 function speak(text){
   if(muted || !('speechSynthesis' in window)) return;
@@ -1240,7 +1500,7 @@ function resizeNaledi(mult){
   NALEDI.root.scale.multiplyScalar(mult);
   NALEDI.root.updateWorldMatrix(true, true);
   const b = new THREE.Box3().setFromObject(NALEDI.root);
-  NALEDI.root.position.y -= b.min.y - DAIS_TOP;   // keep feet on the podium
+  NALEDI.root.position.y -= b.min.y;          // keep her feet on the floor
   const h = b.getSize(new THREE.Vector3()).y;
   NALEDI.height = h;
   toast('Naledi is now ' + h.toFixed(2) + ' m tall. Set TARGET_HEIGHT to '
@@ -1333,7 +1593,7 @@ Valid goto ids: ${STOPS.map(s=>s.id).join(', ')}. Use goto only when moving to a
 }
 
 const history = [];
-let busy = false, queued = null, failCount = 0;
+let busy = false, queued = null;
 
 async function ask(text, atStop){
   if(busy){
@@ -1376,15 +1636,9 @@ async function ask(text, atStop){
     setAIBadge(false, problem);
     if(problem){
       log('AI unavailable:', problem);
-      // The fallback reads like a normal answer, so without this the
-      // failure is invisible and it looks like she's ignoring you.
-      toast('Naledi could not reach the AI: ' + problem
-            + ' She is on scripted answers — click the badge to retry.', 9000);
-      failCount++;
-      if(failCount === 3) runDiagnostic();
+      toast(problem + ' Click the badge top-right to diagnose.', 8000);
     }
   } else {
-    failCount = 0;
     setAIBadge(true);
   }
 
@@ -1540,6 +1794,23 @@ el('plainbtn').addEventListener('click', ()=>{
   }
   toast(plain ? 'Naledi will skip the jargon from here.' : 'Back to normal car talk.');
 });
+el('voicebtn').addEventListener('click', ()=>{
+  const p = el('voicepanel');
+  const open = !p.classList.contains('on');
+  p.classList.toggle('on', open);
+  el('voicebtn').classList.toggle('active', open);
+  if(open){
+    refreshVoices();
+    // Some browsers only populate the list after a first utterance.
+    if(!voices.length) setTimeout(refreshVoices, 400);
+  } else speechSynthesis.cancel();
+});
+el('voiceclose').addEventListener('click', ()=>{
+  el('voicepanel').classList.remove('on');
+  el('voicebtn').classList.remove('active');
+  speechSynthesis.cancel();
+});
+
 el('mutebtn').addEventListener('click', ()=>{
   muted = !muted;
   if(muted) speechSynthesis.cancel();
@@ -1547,14 +1818,56 @@ el('mutebtn').addEventListener('click', ()=>{
   el('mutebtn').classList.toggle('active', !muted);
 });
 el('mutebtn').classList.add('active');
-el('switchbtn').addEventListener('click', ()=>{
+el('switchbtn').addEventListener('click', async ()=>{
   const other = activeKey === 'seal' ? 'sealion7' : 'seal';
-  if(!loaded[other]) return toast('That model did not load.');
+  const btn = el('switchbtn');
+
+  if(!loaded[other]){
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+    const okCar = await loadCar(other, p=>{
+      btn.textContent = 'Loading ' + Math.round(p*100) + '%';
+    });
+    btn.disabled = false;
+    btn.textContent = 'Other model';
+    if(!okCar) return toast('That model could not be loaded.', 6000);
+  }
+
+  // On a phone, free the car we are leaving. Holding both is what
+  // exhausts graphics memory and loses the WebGL context.
+  if(!PROFILE.loadBothCars && loaded[activeKey] && activeKey !== other){
+    disposeCar(activeKey);
+  }
+
   showCar(other);
   session.car = FLEET[other].name;
   history.length = 0;
   goStop('stance');
 });
+
+/* Release a car's GPU memory: geometry, textures and materials all have
+   to go explicitly — dropping the JS reference alone does not free VRAM. */
+function disposeCar(k){
+  const holder = loaded[k];
+  if(!holder) return;
+  holder.traverse(o=>{
+    if(o.isMesh){
+      o.geometry?.dispose();
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for(const m of mats){
+        if(!m) continue;
+        for(const slot of ['map','normalMap','roughnessMap','metalnessMap',
+                           'emissiveMap','aoMap','clearcoatMap','sheenColorMap']){
+          m[slot]?.dispose();
+        }
+        m.dispose();
+      }
+    }
+  });
+  carGroup.remove(holder);
+  delete loaded[k];
+  log('released', k, 'from GPU memory');
+}
 
 /* ════════════════ LOOP ════════════════ */
 const clock = new THREE.Clock();
@@ -1625,13 +1938,22 @@ function frame(){
     (prog.reduce((a,b)=>a+b,0)/keys.length*100).toFixed(0)+'%'; };
 
   el('bootnote').textContent = 'Loading vehicles and presenter…';
+  // On mobile, hold only one car in GPU memory at a time. Two cars plus
+  // the character exhausts a phone's graphics memory and the context is
+  // lost — a white canvas with the audio still playing.
+  const toLoad = PROFILE.loadBothCars ? keys : [];
+
   const [ok] = await Promise.all([
-    Promise.all(keys.map((k,i)=>loadCar(k, p=>{ prog[i]=p; paint(); })
+    Promise.all(toLoad.map((k,i)=>loadCar(k, p=>{ prog[i]=p; paint(); })
       .then(r=>{ prog[i]=1; paint(); return r; }))),
     loadNaledi()
   ]);
 
-  if(!ok.some(Boolean)){
+  if(!PROFILE.loadBothCars){
+    prog.fill(1); paint();
+  }
+
+  if(PROFILE.loadBothCars && !ok.some(Boolean)){
     el('bootnote').style.display='none';
     el('booterr').style.display='block';
     el('booterr').innerHTML = 'The models did not load. Check that <b>2024_byd_seal.glb</b> and <b>2024_byd_sealion_7.glb</b> are in the <b>models</b> folder next to server.py, then reload.';
@@ -1650,7 +1972,25 @@ function frame(){
     const b = document.createElement('button');
     b.className = 'carbtn';
     b.innerHTML = `<div class="n">${c.name}</div><div class="b">${c.blurb}</div><div class="p">${c.price}</div>`;
-    b.addEventListener('click', ()=>{
+    b.addEventListener('click', async ()=>{
+      if(!loaded[k]){
+        // Deferred load (mobile). Show progress on the button itself so
+        // the wait is visible rather than looking like a dead tap.
+        const label = b.innerHTML;
+        b.disabled = true;
+        b.innerHTML = `<div class="n">${c.name}</div>
+          <div class="b">Loading… <span data-pct>0%</span></div>`;
+        const pctEl = b.querySelector('[data-pct]');
+        const okCar = await loadCar(k, p=>{
+          if(pctEl) pctEl.textContent = Math.round(p*100) + '%';
+        });
+        if(!okCar){
+          b.disabled = false;
+          b.innerHTML = label;
+          toast('That model could not be loaded. Try the other one.', 7000);
+          return;
+        }
+      }
       el('pick').classList.remove('on');
       el('stage').classList.add('on');
       showCar(k);
