@@ -86,7 +86,13 @@ PORT = int(os.environ.get("PORT", "8000"))
 HOST = os.environ.get("HOST", "0.0.0.0")
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
+# Static files are served from public/ when that folder exists, and from
+# the repository root otherwise. This keeps both layouts working: a tidy
+# repo with public/, and a flat one with index.html at the top level.
 PUBLIC = os.path.join(ROOT, "public")
+if not os.path.exists(os.path.join(PUBLIC, "index.html")):
+    if os.path.exists(os.path.join(ROOT, "index.html")):
+        PUBLIC = ROOT
 
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
@@ -763,7 +769,7 @@ class Server(socketserver.ThreadingTCPServer):
     daemon_threads = True
 
 
-BUILD = "v10 \u2014 binds 0.0.0.0"
+BUILD = "v11 \u2014 finds index.html either layout"
 
 
 def preflight():
@@ -830,7 +836,16 @@ def preflight():
         print("\n  Or set it in THIS terminal before starting:")
         print('     $env:GEMINI_API_KEY="your-key-here"')
 
-    print("\n  Listening on %s:%d" % (HOST, PORT))
+    print("\n  Serving   %s" % (
+        "public/" if PUBLIC.endswith("public") else "repository root"))
+    if not os.path.exists(os.path.join(PUBLIC, "index.html")):
+        print("            WARNING: no index.html found. Files here:")
+        try:
+            for n in sorted(os.listdir(PUBLIC))[:12]:
+                print("              " + n)
+        except OSError:
+            pass
+    print("  Listening on %s:%d" % (HOST, PORT))
     print("  Showroom    http://localhost:%d" % PORT)
     print("  Mic check   http://localhost:%d/mic-test.html" % PORT)
     print("  Diagnose    http://localhost:%d/api/diag" % PORT)
