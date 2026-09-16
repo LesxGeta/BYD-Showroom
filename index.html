@@ -455,13 +455,42 @@ border:1px solid var(--hairline);border-radius:3px;padding:5px 9px;font-weight:6
 }}
 </script>
 
+<script>
+// Catches errors before and during the module, including ones that would
+// otherwise leave a blank screen with no explanation.
+window.__bydFail = function(what, detail){
+  var b = document.getElementById('boot');
+  if(!b) return;
+  b.style.display = 'flex';
+  b.innerHTML =
+    '<div style="max-width:40ch;text-align:left;line-height:1.7">' +
+    '<div style="font-size:1rem;font-weight:600;margin-bottom:12px;color:#D70C19">' +
+    'The showroom could not start</div>' +
+    '<div style="font-size:.85rem;color:rgba(255,255,255,.75);margin-bottom:14px">' +
+    what + '</div>' +
+    '<pre style="font-size:.7rem;color:rgba(255,255,255,.45);white-space:pre-wrap;' +
+    'background:rgba(0,0,0,.35);padding:12px;border-radius:4px;overflow:auto;' +
+    'max-height:34vh">' + (detail || '') + '</pre></div>';
+};
+window.addEventListener('error', function(e){
+  window.__bydFail('A script error stopped it loading.',
+                   (e.message || '') + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
+});
+window.addEventListener('unhandledrejection', function(e){
+  window.__bydFail('Something failed while loading.',
+                   (e.reason && (e.reason.stack || e.reason.message)) || String(e.reason));
+});
+</script>
+
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const el = id => document.getElementById(id);
+const BUILD = 'ui-v12';
 const log = (...a)=>console.log('%c[byd]','color:#40A2E3',...a);
+log('build', BUILD);
 
 /* ════════════════ VEHICLES ════════════════
    modelYaw rotates the mesh so its nose points to +Z, which is the frame
@@ -584,8 +613,12 @@ const SHARED_FACTS = `Warranty: 5 years/100 000 km vehicle, 8 years/150 000 km b
    canvas goes white while audio carries on regardless.
 
    So mobile gets a reduced profile. It looks slightly softer; it works. */
-const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-                  || Math.min(innerWidth, innerHeight) < 700;
+// Touch device OR genuinely narrow viewport. A short desktop browser
+// window is not a phone, so height alone must not trigger this.
+const IS_MOBILE =
+  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+  (matchMedia('(pointer: coarse)').matches && innerWidth < 900) ||
+  innerWidth < 820;
 
 const PROFILE = IS_MOBILE ? {
   pixelRatio: Math.min(devicePixelRatio, 1.5),
@@ -1963,11 +1996,18 @@ function frame(){
   buildRail();
   applyViewOffset();
   frame();
-  el('boot').style.display = 'none';
 
   const list = el('carlist');
+  if(!list){
+    window.__bydFail('The vehicle chooser is missing from the page.',
+                     'No element with id="carlist" was found in index.html.');
+    return;
+  }
+  list.innerHTML = '';
   keys.forEach((k,i)=>{
-    if(!ok[i]) return;
+    // When cars are preloaded, skip any that failed. When loading is
+    // deferred, every car gets a button — tapping it starts the load.
+    if(PROFILE.loadBothCars && !ok[i]) return;
     const c = FLEET[k];
     const b = document.createElement('button');
     b.className = 'carbtn';
@@ -2003,7 +2043,21 @@ function frame(){
     });
     list.appendChild(b);
   });
+
+  if(!list.children.length){
+    window.__bydFail(
+      'No vehicles are available to show.',
+      'Loaded: ' + JSON.stringify(Object.keys(loaded)) +
+      '\nConfigured: ' + JSON.stringify(keys) +
+      '\nLoad results: ' + JSON.stringify(ok) +
+      '\nProfile: ' + (IS_MOBILE ? 'mobile' : 'desktop') +
+      '\n\nThe .glb files are probably missing from /models/.');
+    return;
+  }
+
+  el('boot').style.display = 'none';
   el('pick').classList.add('on');
+  log('chooser ready with', list.children.length, 'vehicles');
 })();
 </script>
 </body>
